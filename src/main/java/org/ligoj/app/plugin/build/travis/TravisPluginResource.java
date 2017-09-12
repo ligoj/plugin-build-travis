@@ -48,7 +48,6 @@ import org.w3c.dom.Element;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Strings;
 
 /**
  * Travis CI resource.
@@ -195,7 +194,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 		result.setDescription(repo.get("description").asText());
 		final String statusNode = StringUtils.defaultString(repo.get("last_build_state").asText(), "red");
 		result.setStatus(toStatus(statusNode));
-		result.setLastBuildId(Strings.emptyToNull(repo.get("last_build_id").asText()));
+		result.setLastBuildId(StringUtils.defaultString((repo.get("last_build_id").asText())));
 		//result.setBuilding(statusNode.endsWith("_anime"));
 		result.setId(job);
 		return result;
