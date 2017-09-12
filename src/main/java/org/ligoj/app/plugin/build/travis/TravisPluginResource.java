@@ -1,5 +1,6 @@
 package org.ligoj.app.plugin.build.travis;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -44,6 +45,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.xml.DomUtils;
 import org.w3c.dom.Element;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 
 /**
  * Travis CI resource.
@@ -169,24 +174,29 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 *            the administration parameters.
 	 * @return job name.
 	 */
-	protected Job validateJob(final Map<String, String> parameters) throws MalformedURLException, URISyntaxException {
+	protected Job validateJob(final Map<String, String> parameters) throws MalformedURLException, URISyntaxException, IOException {
 		// Get job's configuration
 		final String job = parameters.get(PARAMETER_JOB);
-		final String jobXml = getResource(parameters,
-				"api/xml?depth=1&tree=jobs[displayName,name,color]&xpath=hudson/job[name='" + encode(job)
-						+ "']&wrapper=hudson");
-		if (jobXml == null || "<hudson/>".equals(jobXml)) {
+		String jobJson = getResource(parameters,
+				"/repos/" + encode(job));
+		if (jobJson == null) { 
 			// Invalid couple PKEY and id
-			throw new ValidationJsonException(PARAMETER_JOB, "jenkins-job", job);
+			throw new ValidationJsonException(PARAMETER_JOB, "travis-job", job);
 		}
 
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode node = mapper.readTree(jobJson);
+		
 		// Retrieve description, status and display name
 		final Job result = new Job();
-		result.setName(getNodeText(jobXml, "displayName"));
-		result.setDescription(getNodeText(jobXml, "description"));
-		final String statusNode = StringUtils.defaultString(getNodeText(jobXml, "color"), "disabled");
+		
+		JsonNode repo = node.get("repo");
+		result.setName(repo.get("slug").asText());
+		result.setDescription(repo.get("description").asText());
+		final String statusNode = StringUtils.defaultString(repo.get("last_build_state").asText(), "red");
 		result.setStatus(toStatus(statusNode));
-		result.setBuilding(statusNode.endsWith("_anime"));
+		result.setLastBuildId(Strings.emptyToNull(repo.get("last_build_id").asText()));
+		//result.setBuilding(statusNode.endsWith("_anime"));
 		result.setId(job);
 		return result;
 	}
@@ -301,7 +311,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	}
 
 	/**
-	 * Get Jenkins job name by id.
+	 * Get Travis job name by id.
 	 * 
 	 * @param node
 	 *            the node to be tested with given parameters.
@@ -313,7 +323,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	@Path("{node}/job/{id}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Job findById(@PathParam("node") final String node, @PathParam("id") final String id)
-			throws MalformedURLException, URISyntaxException {
+			throws MalformedURLException, URISyntaxException,  IOException {
 		// Prepare the context, an ordered set of jobs
 		final Map<String, String> parameters = pvResource.getNodeParameters(node);
 		parameters.put(PARAMETER_JOB, id);
@@ -370,14 +380,14 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	}
 
 	/**
-	 * Return the color from the raw color of the job.
+	 * Return the color from the status of the job.
 	 * 
-	 * @param color
-	 *            Raw color node from the job status.
-	 * @return The color without 'anime' flag.
+	 * @param status
+	 *            last status for the job
+	 * @return The color for the current status.
 	 */
-	private String toStatus(final String color) {
-		return StringUtils.removeEnd(StringUtils.defaultString(color, "disabled"), "_anime");
+	private String toStatus(final String status) {
+		return "passed".equals(status)?"green":"red";
 	}
 
 	@Override
@@ -430,7 +440,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 * Used to launch the job for the subscription.
 	 * 
 	 * @param subscription
-	 *            the subscription to use to locate the Jenkins instance.
+	 *            the subscription to use to locate the Travis instance.
 	 * @throws Exception
 	 *             when the job cannot be launched
 	 */
@@ -440,28 +450,27 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
 
 		// Check the instance is available
-		validateAdminAccess(parameters);
-		if (!build(parameters, "build") && !build(parameters, "buildWithParameters")) {
+		Job job = validateJob(parameters);
+		
+		if (job.getLastBuildId() == null || !build(parameters, job) ) {
 			throw new BusinessException("Launching the job for the subscription {} failed.", subscription);
 		}
 	}
 
 	/**
-	 * Launch the job with the URL.
+	 * Launch the job with the job.
 	 * 
 	 * @param parameters
 	 *            Parameters used to define the job
-	 * @param url
-	 *            URL added to the jenkins's URL to launch the job (can be build
-	 *            or buildWithParameters)
+	 * @param job
+	 *           contains some information on the job as the last build id.
 	 * @return The result of the processing.
 	 */
-	protected boolean build(final Map<String, String> parameters, final String url) {
+	protected boolean build(final Map<String, String> parameters, final Job job) {
 		final CurlProcessor processor = new TravisCurlProcessor(parameters);
 		try {
-			final String jenkinsBaseUrl = parameters.get(PARAMETER_URL);
-			final String jobName = parameters.get(PARAMETER_JOB);
-			return processor.process(new CurlRequest("POST", jenkinsBaseUrl + "/job/" + jobName + "/" + url, null));
+			final String travisBaseUrl = parameters.get(PARAMETER_URL);
+			return processor.process(new CurlRequest("POST", travisBaseUrl + "/builds/" + job.getLastBuildId() + "/restart", null));
 		} finally {
 			processor.close();
 		}

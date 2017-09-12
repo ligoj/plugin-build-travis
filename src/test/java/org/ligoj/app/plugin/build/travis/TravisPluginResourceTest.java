@@ -151,13 +151,13 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	@Test
 	public void validateJobNotFound() throws IOException, URISyntaxException {
 		thrown.expect(ValidationJsonException.class);
-		thrown.expect(MatcherUtil.validationMatcher(TravisPluginResource.PARAMETER_JOB, "jenkins-job"));
-		httpServer.stubFor(get(urlEqualTo("/job/gfi-bootstrap/config.xml"))
+		thrown.expect(MatcherUtil.validationMatcher(TravisPluginResource.PARAMETER_JOB, "travis-job"));
+		httpServer.stubFor(get(urlEqualTo("/repos/gfi/bootstrap"))
 				.willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND)));
 		httpServer.start();
 
-		final Map<String, String> parameters = pvResource.getNodeParameters("service:build:jenkins:bpr");
-		parameters.put(TravisPluginResource.PARAMETER_JOB, "gfi-bootstrap");
+		final Map<String, String> parameters = pvResource.getNodeParameters("service:build:travis:bpr");
+		parameters.put(TravisPluginResource.PARAMETER_JOB, "gfi/bootstrap");
 		resource.validateJob(parameters);
 	}
 
@@ -191,8 +191,8 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 		addJobAccess();
 		httpServer.start();
 
-		final Map<String, String> parameters = pvResource.getNodeParameters("service:build:jenkins:bpr");
-		parameters.put(TravisPluginResource.PARAMETER_JOB, "gfi-bootstrap");
+		final Map<String, String> parameters = pvResource.getNodeParameters("service:build:travis:bpr");
+		parameters.put(TravisPluginResource.PARAMETER_JOB, "ligoj/plugin-vm-google");
 		checkJob(resource.validateJob(parameters), false);
 	}
 
@@ -227,10 +227,10 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	private void checkJob(final Job job, final boolean building) {
-		Assert.assertEquals("gfi-bootstrap", job.getId());
-		Assert.assertEquals("Gfi - Bootstrap", job.getName());
-		Assert.assertEquals("Any description", job.getDescription());
-		Assert.assertEquals("yellow", job.getStatus());
+		Assert.assertEquals("ligoj/plugin-vm-google", job.getId());
+		Assert.assertEquals("ligoj/plugin-vm-google", job.getName());
+		Assert.assertEquals("Ligoj plugin for Google instance life cycle management : scheduled ON/OFF", job.getDescription());
+		Assert.assertEquals("green", job.getStatus());
 		Assert.assertEquals(building, job.isBuilding());
 	}
 
@@ -258,10 +258,10 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 
 	private void addJobAccess() throws IOException {
 		httpServer.stubFor(get(urlEqualTo(
-				"/api/xml?depth=1&tree=jobs[displayName,name,color]&xpath=hudson/job[name='gfi-bootstrap']&wrapper=hudson"))
+				"/repos/ligoj/plugin-vm-google"))
 						.willReturn(aResponse().withStatus(HttpStatus.SC_OK)
 								.withBody(IOUtils.toString(
-										new ClassPathResource("mock-server/jenkins/jenkins-gfi-bootstrap-config.xml")
+										new ClassPathResource("mock-server/travis/travis-ligoj-vm-google-config.json")
 												.getInputStream(),
 										StandardCharsets.UTF_8))));
 	}
@@ -348,16 +348,16 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	public void findJobsByIdSuccess() throws Exception {
 		addJobAccessBuilding();
 		httpServer.start();
-		checkJob(resource.findById("service:build:jenkins:bpr", "gfi-bootstrap"), true);
+		checkJob(resource.findById("service:build:travis:bpr", "ligoj/plugin-vm-google"), true);
 	}
 
 	@Test(expected = ValidationJsonException.class)
 	public void findJobsByIdFail() throws Exception {
 		httpServer.stubFor(get(urlEqualTo(
-				"/api/xml?depth=1&tree=jobs[displayName,name,color]&xpath=hudson/job[name='gfi-bootstraps']&wrapper=hudson"))
-						.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody("<hudson/>")));
+				"/repos/ligoj/plugin-vm-googlee"))
+						.willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND).withBody("{\"file\":\"not found\"}")));
 		httpServer.start();
-		resource.findById("service:build:jenkins:bpr", "gfi-bootstraps");
+		resource.findById("service:build:travis:bpr", "ligoj/plugin-vm-googlee");
 	}
 
 	private void addLoginAccess() throws IOException {
@@ -439,10 +439,9 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 
 	@Test
 	public void build() throws Exception {
-		addLoginAccess();
-		addAdminAccess();
+		addJobAccess();
 		httpServer.stubFor(
-				post(urlEqualTo("/job/gfi-bootstrap/build")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)));
+				post(urlEqualTo("/builds/274572860/restart")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)));
 		httpServer.start();
 		this.resource.build(subscription);
 	}
@@ -454,19 +453,6 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 		Mockito.when(map.get(TravisPluginResource.PARAMETER_TOKEN)).thenReturn("some");
 		Mockito.when(map.get(TravisPluginResource.PARAMETER_URL)).thenThrow(new RuntimeException());
 		this.resource.build(map, null);
-	}
-
-	@Test
-	public void buildParameters() throws Exception {
-		addLoginAccess();
-		addAdminAccess();
-		httpServer.stubFor(post(urlEqualTo("/job/gfi-bootstrap/build"))
-				.willReturn(aResponse().withStatus(HttpStatus.SC_INTERNAL_SERVER_ERROR)));
-		httpServer.stubFor(post(urlEqualTo("/job/gfi-bootstrap/buildWithParameters"))
-				.willReturn(aResponse().withStatus(HttpStatus.SC_OK)));
-		httpServer.start();
-		this.resource.build(subscription);
-
 	}
 
 }

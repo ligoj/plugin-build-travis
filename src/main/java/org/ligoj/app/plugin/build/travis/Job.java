@@ -14,4 +14,5 @@ public class Job extends DescribedBean<String> {
 
 	private String status;
 	private boolean building;
+	private String lastBuildId;
 }

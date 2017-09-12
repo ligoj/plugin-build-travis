@@ -1,4 +1,4 @@
 id;name;refined.id;mode;uiClasses;tag;tagUiClasses
 service:build;Build;;LINK;fa fa-cogs;technical;fa fa-industry
 service:build:travis;travis;service:build;LINK;;;
-service:build:travis:bpr;Travis BPR;service:build:jenkins;LINK;;;
+service:build:travis:bpr;Travis BPR;service:build:travis;LINK;;;
