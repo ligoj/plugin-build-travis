@@ -138,8 +138,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 *            the administration parameters.
 	 * @return job name.
 	 */
-	protected Job validateJob(final Map<String, String> parameters)
-			throws MalformedURLException, URISyntaxException, IOException {
+	protected Job validateJob(final Map<String, String> parameters) throws URISyntaxException, IOException {
 		// Get job's configuration
 		final String job = parameters.get(PARAMETER_JOB);
 		String jobJson = getResource(parameters, "/repos/" + encode(job));
@@ -152,39 +151,12 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 		JsonNode node = mapper.readTree(jobJson);
 
 		// Retrieve description, status and display name
-		final Job result = new Job();
-
 		JsonNode repo = node.get("repo");
-		result.setName(repo.get("slug").asText());
-		result.setDescription(repo.get("description").asText());
-		final String statusNode = StringUtils.defaultString(repo.get("last_build_state").asText(), "red");
-		result.setStatus(toStatus(statusNode));
-		result.setLastBuildId(StringUtils.defaultString((repo.get("last_build_id").asText())));
-		result.setBuilding("started".equals(statusNode));
-		result.setId(job);
-		return result;
+		return transform(repo);
 	}
 
 	private String encode(final String job) throws MalformedURLException, URISyntaxException {
 		return new URI("http", job, "").toURL().getPath();
-	}
-
-	/**
-	 * Return the node text without using document parser.
-	 *
-	 * @param xmlContent
-	 *            XML content.
-	 * @param node
-	 *            the node name.
-	 * @return trimmed node text or <code>null</code>.
-	 */
-	private String getNodeText(final String xmlContent, final String node) {
-		final Matcher matcher = Pattern.compile("<" + node + ">([^<]*)</" + node + ">")
-				.matcher(ObjectUtils.defaultIfNull(xmlContent, ""));
-		if (matcher.find()) {
-			return StringUtils.trimToNull(matcher.group(1));
-		}
-		return null;
 	}
 
 	/**
@@ -322,17 +294,20 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 
 		ArrayNode jobsNode = (ArrayNode) jsonNode.get("repos");
 
-		return StreamSupport.stream(jobsNode.spliterator(), false).map(item -> {
-			Job result = new Job();
-			result.setName(item.get("slug").asText());
-			result.setDescription(item.get("description").asText());
-			final String statusNode = StringUtils.defaultString(item.get("last_build_state").asText(), "red");
-			result.setStatus(toStatus(statusNode));
-			result.setLastBuildId(StringUtils.defaultString((item.get("last_build_id").asText())));
-			// result.setBuilding(statusNode.endsWith("_anime"));
-			result.setId(item.get("slug").asText());
-			return result;
-		}).collect(Collectors.toList());
+		return StreamSupport.stream(jobsNode.spliterator(), false).map(TravisPluginResource::transform)
+				.collect(Collectors.toList());
+	}
+
+	public static Job transform(JsonNode item) {
+		Job result = new Job();
+		result.setName(item.get("slug").asText());
+		result.setDescription(item.get("description").asText());
+		final String statusNode = StringUtils.defaultString(item.get("last_build_state").asText(), "red");
+		result.setStatus(toStatus(statusNode));
+		result.setLastBuildId(StringUtils.defaultString((item.get("last_build_id").asText())));
+		// result.setBuilding(statusNode.endsWith("_anime"));
+		result.setId(item.get("slug").asText());
+		return result;
 	}
 
 	/**
@@ -342,7 +317,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 *            last status for the job
 	 * @return The color for the current status.
 	 */
-	private String toStatus(final String status) {
+	private static String toStatus(final String status) {
 		return "passed".equals(status) ? "green" : "started".equals(status) ? "yellow" : "red";
 	}
 
@@ -401,7 +376,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 */
 	@POST
 	@Path("build/{subscription:\\d+}")
-	public void build(@PathParam("subscription") final int subscription) throws Exception {
+	public void build(@PathParam("subscription") final int subscription) throws URISyntaxException, IOException {
 		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
 
 		// Check the instance is available
