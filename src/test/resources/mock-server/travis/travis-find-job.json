@@ -1,0 +1,74 @@
+{
+    "repos": [
+        {
+            "id": 4872816,
+            "slug": "ligo-cbc/pycbc",
+            "description": "Analyze gravitational-wave data, find signals, and study their parameters. This package was used in the first direct detection of gravitational waves (GW150914), and is used in the ongoing analysis of LIGO/Virgo data.  ",
+            "last_build_id": 274954511,
+            "last_build_number": "5575",
+            "last_build_state": "started",
+            "last_build_duration": null,
+            "last_build_language": null,
+            "last_build_started_at": "2017-09-13T09:08:22Z",
+            "last_build_finished_at": null,
+            "active": true,
+            "github_language": null
+        },
+        {
+            "id": 12956182,
+            "slug": "ligoj/plugin-vm-aws",
+            "description": "Ligoj plugin for AWS EC2 instance life cycle management : scheduled ON/OFF",
+            "last_build_id": 274749144,
+            "last_build_number": "18",
+            "last_build_state": "passed",
+            "last_build_duration": 95,
+            "last_build_language": null,
+            "last_build_started_at": "2017-09-12T19:30:58Z",
+            "last_build_finished_at": "2017-09-12T19:32:33Z",
+            "active": true,
+            "github_language": null
+        },
+        {
+            "id": 12722119,
+            "slug": "ligoj/plugin-vm",
+            "description": "Ligoj plugin for VM runtime management : scheduled/manual ON/OFF with status pooling",
+            "last_build_id": 274748460,
+            "last_build_number": "22",
+            "last_build_state": "passed",
+            "last_build_duration": 111,
+            "last_build_language": null,
+            "last_build_started_at": "2017-09-12T19:28:59Z",
+            "last_build_finished_at": "2017-09-12T19:30:50Z",
+            "active": true,
+            "github_language": null
+        },
+        {
+            "id": 7373291,
+            "slug": "LoliGothick/Cranberries",
+            "description": null,
+            "last_build_id": 274677437,
+            "last_build_number": "371",
+            "last_build_state": "failed",
+            "last_build_duration": 174,
+            "last_build_language": null,
+            "last_build_started_at": "2017-09-12T16:14:40Z",
+            "last_build_finished_at": "2017-09-12T16:16:14Z",
+            "active": true,
+            "github_language": null
+        },
+        {
+            "id": 15176457,
+            "slug": "ligoj/plugin-build-travis",
+            "description": "Ligoj plugin for Travis CI",
+            "last_build_id": 274666153,
+            "last_build_number": "5",
+            "last_build_state": "passed",
+            "last_build_duration": 194,
+            "last_build_language": null,
+            "last_build_started_at": "2017-09-12T15:45:54Z",
+            "last_build_finished_at": "2017-09-12T15:49:08Z",
+            "active": true,
+            "github_language": null
+        }
+    ]
+}

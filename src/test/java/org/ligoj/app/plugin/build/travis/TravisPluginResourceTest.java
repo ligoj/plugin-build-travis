@@ -1,6 +1,7 @@
 package org.ligoj.app.plugin.build.travis;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
@@ -31,8 +32,6 @@ import org.ligoj.app.model.ParameterValue;
 import org.ligoj.app.model.Project;
 import org.ligoj.app.model.Subscription;
 import org.ligoj.app.plugin.build.BuildResource;
-import org.ligoj.app.plugin.build.travis.TravisPluginResource;
-import org.ligoj.app.plugin.build.travis.Job;
 import org.ligoj.app.resource.node.ParameterValueResource;
 import org.ligoj.app.resource.subscription.SubscriptionResource;
 import org.ligoj.bootstrap.core.resource.BusinessException;
@@ -152,8 +151,8 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	public void validateJobNotFound() throws IOException, URISyntaxException {
 		thrown.expect(ValidationJsonException.class);
 		thrown.expect(MatcherUtil.validationMatcher(TravisPluginResource.PARAMETER_JOB, "travis-job"));
-		httpServer.stubFor(get(urlEqualTo("/repos/gfi/bootstrap"))
-				.willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND)));
+		httpServer.stubFor(
+				get(urlEqualTo("/repos/gfi/bootstrap")).willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND)));
 		httpServer.start();
 
 		final Map<String, String> parameters = pvResource.getNodeParameters("service:build:travis:bpr");
@@ -193,27 +192,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 
 		final Map<String, String> parameters = pvResource.getNodeParameters("service:build:travis:bpr");
 		parameters.put(TravisPluginResource.PARAMETER_JOB, "ligoj/plugin-vm-google");
-		checkJob(resource.validateJob(parameters), false);
-	}
-
-	@Test
-	public void validateJobSimple() throws IOException, URISyntaxException {
-		httpServer.stubFor(get(urlEqualTo(
-				"/api/xml?depth=1&tree=jobs[displayName,name,color]&xpath=hudson/job[name='gfi-bootstrap']&wrapper=hudson"))
-						.willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-								.withBody(IOUtils.toString(new ClassPathResource(
-										"mock-server/jenkins/jenkins-gfi-bootstrap-config-simple.xml").getInputStream(),
-										StandardCharsets.UTF_8))));
-		httpServer.start();
-
-		final Map<String, String> parameters = pvResource.getNodeParameters("service:build:jenkins:bpr");
-		parameters.put(TravisPluginResource.PARAMETER_JOB, "gfi-bootstrap");
-		final Job job = resource.validateJob(parameters);
-		Assert.assertEquals("gfi-bootstrap", job.getId());
-		Assert.assertNull(job.getName());
-		Assert.assertNull(job.getDescription());
-		Assert.assertEquals("disabled", job.getStatus());
-		Assert.assertFalse(job.isBuilding());
+		checkJob(resource.validateJob(parameters), false, "green");
 	}
 
 	@Test
@@ -221,16 +200,17 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 		addJobAccessBuilding();
 		httpServer.start();
 
-		final Map<String, String> parameters = pvResource.getNodeParameters("service:build:jenkins:bpr");
-		parameters.put(TravisPluginResource.PARAMETER_JOB, "gfi-bootstrap");
-		checkJob(resource.validateJob(parameters), true);
+		final Map<String, String> parameters = pvResource.getNodeParameters("service:build:travis:bpr");
+		parameters.put(TravisPluginResource.PARAMETER_JOB, "ligoj/plugin-vm-google");
+		checkJob(resource.validateJob(parameters), true, "yellow");
 	}
 
-	private void checkJob(final Job job, final boolean building) {
+	private void checkJob(final Job job, final boolean building, final String status) {
 		Assert.assertEquals("ligoj/plugin-vm-google", job.getId());
 		Assert.assertEquals("ligoj/plugin-vm-google", job.getName());
-		Assert.assertEquals("Ligoj plugin for Google instance life cycle management : scheduled ON/OFF", job.getDescription());
-		Assert.assertEquals("green", job.getStatus());
+		Assert.assertEquals("Ligoj plugin for Google instance life cycle management : scheduled ON/OFF",
+				job.getDescription());
+		Assert.assertEquals(status, job.getStatus());
 		Assert.assertEquals(building, job.isBuilding());
 	}
 
@@ -253,24 +233,22 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 		final SubscriptionStatusWithData nodeStatusWithData = resource
 				.checkSubscriptionStatus(subscriptionResource.getParametersNoCheck(subscription));
 		Assert.assertTrue(nodeStatusWithData.getStatus().isUp());
-		checkJob((Job) nodeStatusWithData.getData().get("job"), false);
+		checkJob((Job) nodeStatusWithData.getData().get("job"), false, "green");
 	}
 
 	private void addJobAccess() throws IOException {
-		httpServer.stubFor(get(urlEqualTo(
-				"/repos/ligoj/plugin-vm-google"))
-						.willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-								.withBody(IOUtils.toString(
-										new ClassPathResource("mock-server/travis/travis-ligoj-vm-google-config.json")
-												.getInputStream(),
-										StandardCharsets.UTF_8))));
+		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/plugin-vm-google")).willReturn(aResponse()
+				.withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(
+						new ClassPathResource("mock-server/travis/travis-ligoj-vm-google-config.json").getInputStream(),
+						StandardCharsets.UTF_8))));
 	}
 
 	private void addJobAccessBuilding() throws IOException {
-		httpServer.stubFor(get(urlEqualTo(
-				"/api/xml?depth=1&tree=jobs[displayName,name,color]&xpath=hudson/job[name='gfi-bootstrap']&wrapper=hudson"))
-						.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils.toString(
-								new ClassPathResource("mock-server/jenkins/jenkins-gfi-bootstrap-config-building.xml")
+		httpServer.stubFor(
+				get(urlEqualTo("/repos/ligoj/plugin-vm-google")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+						.withBody(IOUtils.toString(
+								new ClassPathResource("mock-server/travis/travis-ligoj-vm-google-building.json")
 										.getInputStream(),
 								StandardCharsets.UTF_8))));
 	}
@@ -282,8 +260,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 		addJobAccess();
 		httpServer.start();
 
-		final String version = resource
-				.validateAdminAccess(pvResource.getNodeParameters("service:build:jenkins:bpr"));
+		final String version = resource.validateAdminAccess(pvResource.getNodeParameters("service:build:jenkins:bpr"));
 		Assert.assertEquals("1.574", version);
 	}
 
@@ -330,32 +307,36 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 
 	@Test
 	public void findJobsByName() throws Exception {
-		httpServer.stubFor(get(urlPathEqualTo("/api/xml")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(
-						new ClassPathResource("mock-server/jenkins/jenkins-api-xml-tree.xml").getInputStream(),
-						StandardCharsets.UTF_8))));
+		httpServer
+				.stubFor(get(urlPathEqualTo("/repos")).withQueryParam("search", equalTo("ligo"))
+						.withQueryParam("orderBy", equalTo("name")).withQueryParam("limit", equalTo("10"))
+						.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils.toString(
+								new ClassPathResource("mock-server/travis/travis-find-job.json")
+										.getInputStream(),
+								StandardCharsets.UTF_8))));
+
 		httpServer.start();
 
-		final List<Job> jobs = resource.findAllByName("service:build:jenkins:bpr", "gfi");
-		Assert.assertEquals(29, jobs.size());
-		Assert.assertEquals("Gfi - Chronotime - SSE", jobs.get(3).getName());
-		Assert.assertEquals("CHRONOTIME - Projet SSE", jobs.get(3).getDescription());
-		Assert.assertEquals("gfi-chronotime-sse", jobs.get(3).getId());
-		Assert.assertEquals("disabled", jobs.get(3).getStatus());
+		final List<Job> jobs = resource.findAllByName("service:build:travis:bpr", "ligo");
+		Assert.assertEquals(5, jobs.size());
+		Assert.assertEquals("ligoj/plugin-vm-aws", jobs.get(1).getName());
+		Assert.assertEquals("Ligoj plugin for AWS EC2 instance life cycle management : scheduled ON/OFF",
+				jobs.get(1).getDescription());
+		Assert.assertEquals("ligoj/plugin-vm-aws", jobs.get(1).getId());
+		Assert.assertEquals("green", jobs.get(1).getStatus());
 	}
 
 	@Test
 	public void findJobsByIdSuccess() throws Exception {
 		addJobAccessBuilding();
 		httpServer.start();
-		checkJob(resource.findById("service:build:travis:bpr", "ligoj/plugin-vm-google"), true);
+		checkJob(resource.findById("service:build:travis:bpr", "ligoj/plugin-vm-google"), true, "yellow");
 	}
 
 	@Test(expected = ValidationJsonException.class)
 	public void findJobsByIdFail() throws Exception {
-		httpServer.stubFor(get(urlEqualTo(
-				"/repos/ligoj/plugin-vm-googlee"))
-						.willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND).withBody("{\"file\":\"not found\"}")));
+		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/plugin-vm-googlee"))
+				.willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND).withBody("{\"file\":\"not found\"}")));
 		httpServer.start();
 		resource.findById("service:build:travis:bpr", "ligoj/plugin-vm-googlee");
 	}
@@ -366,67 +347,6 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 				.withBody(IOUtils.toString(
 						new ClassPathResource("mock-server/jenkins/jenkins-api-xml.xml").getInputStream(),
 						StandardCharsets.UTF_8))));
-	}
-
-	@Test
-	public void create() throws Exception {
-		addLoginAccess();
-		addAdminAccess();
-
-		// retrieve template config.xml
-		httpServer.stubFor(get(urlEqualTo("/job/template/config.xml")).willReturn(aResponse()
-				.withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(
-						new ClassPathResource("mock-server/jenkins/jenkins-template-config.xml").getInputStream(),
-						StandardCharsets.UTF_8))));
-		// post new job config.xml
-		httpServer.stubFor(post(urlEqualTo("/createItem?name=gfi-bootstrap"))
-				.withRequestBody(WireMock.containing("fdaugan@sample.com"))
-				.withRequestBody(WireMock.containing("<disabled>false</disabled>"))
-				.willReturn(aResponse().withStatus(HttpStatus.SC_OK)));
-		httpServer.start();
-
-		// prepare new subscription
-		final Subscription subscription = em.find(Subscription.class, this.subscription);
-		createParameterValueTemplateJob(subscription);
-		this.resource.create(this.subscription);
-	}
-
-	@Test(expected = BusinessException.class)
-	public void createFailed() throws Exception {
-		addLoginAccess();
-		addAdminAccess();
-
-		// retrieve template config.xml
-		httpServer.stubFor(get(urlEqualTo("/job/template/config.xml")).willReturn(aResponse()
-				.withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(
-						new ClassPathResource("mock-server/jenkins/jenkins-template-config.xml").getInputStream(),
-						StandardCharsets.UTF_8))));
-		// post new job config.xml
-		httpServer.stubFor(post(urlEqualTo("/createItem?name=gfi-bootstrap"))
-				.willReturn(aResponse().withStatus(HttpStatus.SC_BAD_REQUEST)));
-		httpServer.start();
-
-		// prepare new subscription
-		final Subscription subscription = em.find(Subscription.class, this.subscription);
-		createParameterValueTemplateJob(subscription);
-		this.resource.create(this.subscription);
-	}
-
-	/**
-	 * create a parameter value for template Job definition
-	 * 
-	 * @param subscription
-	 *            future parameter value linked subscription
-	 */
-	private void createParameterValueTemplateJob(final Subscription subscription) {
-		final ParameterValue parameterValue = new ParameterValue();
-		parameterValue.setParameter(em.find(Parameter.class, "service:build:jenkins:template-job"));
-		parameterValue.setSubscription(subscription);
-		parameterValue.setData("template");
-		em.persist(parameterValue);
-		em.flush();
 	}
 
 	@Test(expected = BusinessException.class)

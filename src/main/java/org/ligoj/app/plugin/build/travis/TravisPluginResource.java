@@ -6,13 +6,12 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.text.Format;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -28,11 +27,8 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.api.SubscriptionStatusWithData;
 import org.ligoj.app.iam.IamProvider;
-import org.ligoj.app.iam.UserOrg;
-import org.ligoj.app.model.Project;
 import org.ligoj.app.plugin.build.BuildResource;
 import org.ligoj.app.plugin.build.BuildServicePlugin;
-import org.ligoj.app.resource.NormalizeFormat;
 import org.ligoj.app.resource.plugin.AbstractXmlApiToolPluginResource;
 import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.app.resource.plugin.CurlRequest;
@@ -43,11 +39,10 @@ import org.ligoj.bootstrap.core.validation.ValidationJsonException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.xml.DomUtils;
-import org.w3c.dom.Element;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
 /**
  * Travis CI resource.
@@ -119,36 +114,6 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	}
 
 	@Override
-	public void create(final int subscription) throws Exception {
-		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
-		// Validate the node settings
-		validateAdminAccess(parameters);
-
-		// Get Template configuration
-		final String templateJob = parameters.get(PARAMETER_TEMPLATE_JOB);
-		final String templateConfigXml = getResource(parameters, "job/" + encode(templateJob) + "/config.xml");
-
-		// update template
-		final Project project = subscriptionRepository.findOneExpected(subscription).getProject();
-		final UserOrg teamLeader = iamProvider[0].getConfiguration().getUserRepository().findById(project.getTeamLeader());
-		final String configXml = templateConfigXml
-				.replaceFirst("<disabled>true</disabled>", "<disabled>false</disabled>")
-				.replaceAll("gfi-saas", project.getPkey())
-				.replaceAll("responsable.projet@gfi.fr", teamLeader.getMails().get(0))
-				.replaceFirst("(<displayName>).*?(</displayName>)", "$1" + project.getName() + "$2")
-				.replaceFirst("(<description>).*?(</description>)", "$1" + project.getDescription() + "$2");
-
-		// create new job
-		final String job = parameters.get(PARAMETER_JOB);
-		final String jenkinsBaseUrl = parameters.get(PARAMETER_URL);
-		final CurlRequest curlRequest = new CurlRequest(HttpMethod.POST,
-				jenkinsBaseUrl + "/createItem?name=" + encode(job), configXml, "Content-Type:application/xml");
-		if (!new TravisCurlProcessor(parameters).process(curlRequest)) {
-			throw new BusinessException("Creating the job for the subscription {} failed.", subscription);
-		}
-	}
-
-	@Override
 	public void delete(final int subscription, final boolean deleteRemoteData) throws Exception {
 		if (deleteRemoteData) {
 			final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
@@ -168,34 +133,34 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 
 	/**
 	 * Validate the administration connectivity.
-	 * 
+	 *
 	 * @param parameters
 	 *            the administration parameters.
 	 * @return job name.
 	 */
-	protected Job validateJob(final Map<String, String> parameters) throws MalformedURLException, URISyntaxException, IOException {
+	protected Job validateJob(final Map<String, String> parameters)
+			throws MalformedURLException, URISyntaxException, IOException {
 		// Get job's configuration
 		final String job = parameters.get(PARAMETER_JOB);
-		String jobJson = getResource(parameters,
-				"/repos/" + encode(job));
-		if (jobJson == null) { 
+		String jobJson = getResource(parameters, "/repos/" + encode(job));
+		if (jobJson == null) {
 			// Invalid couple PKEY and id
 			throw new ValidationJsonException(PARAMETER_JOB, "travis-job", job);
 		}
 
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode node = mapper.readTree(jobJson);
-		
+
 		// Retrieve description, status and display name
 		final Job result = new Job();
-		
+
 		JsonNode repo = node.get("repo");
 		result.setName(repo.get("slug").asText());
 		result.setDescription(repo.get("description").asText());
 		final String statusNode = StringUtils.defaultString(repo.get("last_build_state").asText(), "red");
 		result.setStatus(toStatus(statusNode));
 		result.setLastBuildId(StringUtils.defaultString((repo.get("last_build_id").asText())));
-		//result.setBuilding(statusNode.endsWith("_anime"));
+		result.setBuilding("started".equals(statusNode));
 		result.setId(job);
 		return result;
 	}
@@ -206,7 +171,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 
 	/**
 	 * Return the node text without using document parser.
-	 * 
+	 *
 	 * @param xmlContent
 	 *            XML content.
 	 * @param node
@@ -224,7 +189,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 
 	/**
 	 * Validate the basic REST connectivity to Jenkins.
-	 * 
+	 *
 	 * @param parameters
 	 *            the server parameters.
 	 * @return the detected Jenkins version.
@@ -276,7 +241,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	/**
 	 * Search the Jenkin's template jobs matching to the given criteria. Name,
 	 * display name and description are considered.
-	 * 
+	 *
 	 * @param node
 	 *            the node to be tested with given parameters.
 	 * @param criteria
@@ -292,9 +257,9 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	}
 
 	/**
-	 * Search the Jenkin's jobs matching to the given criteria. Name, display
+	 * Search the Travis's jobs matching to the given criteria. Name, display
 	 * name and description are considered.
-	 * 
+	 *
 	 * @param node
 	 *            the node to be tested with given parameters.
 	 * @param criteria
@@ -311,7 +276,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 
 	/**
 	 * Get Travis job name by id.
-	 * 
+	 *
 	 * @param node
 	 *            the node to be tested with given parameters.
 	 * @param id
@@ -322,7 +287,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	@Path("{node}/job/{id}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Job findById(@PathParam("node") final String node, @PathParam("id") final String id)
-			throws MalformedURLException, URISyntaxException,  IOException {
+			throws MalformedURLException, URISyntaxException, IOException {
 		// Prepare the context, an ordered set of jobs
 		final Map<String, String> parameters = pvResource.getNodeParameters(node);
 		parameters.put(PARAMETER_JOB, id);
@@ -332,7 +297,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	/**
 	 * Search the Jenkin's jobs matching to the given criteria. Name, display
 	 * name and description are considered.
-	 * 
+	 *
 	 * @param node
 	 *            the node to be tested with given parameters.
 	 * @param criteria
@@ -341,52 +306,44 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 *            The optional view URL.
 	 * @return job names matching the criteria.
 	 */
-	private List<Job> findAllByName(final String node, final String criteria, final String view) throws Exception { // NOSONAR Too many exceptions
+	private List<Job> findAllByName(final String node, final String criteria, final String view) throws Exception { // NOSONAR
+																													// Too
+																													// many
+																													// exceptions
 
-		// Prepare the context, an ordered set of jobs
-		final Format format = new NormalizeFormat();
-		final String formatCriteria = format.format(criteria);
 		final Map<String, String> parameters = pvResource.getNodeParameters(node);
 
 		// Get the jobs and parse them
-		final String url = StringUtils.trimToEmpty(view) + "api/xml?tree=jobs[name,displayName,description,color]";
+		final String url = StringUtils.trimToEmpty(view) + "repos?search=" + criteria + "&orderBy=name&limit=10";
 		final InputStream jobsAsInput = IOUtils.toInputStream(getResource(parameters, url), StandardCharsets.UTF_8);
-		final Element hudson = (Element) parse(jobsAsInput).getFirstChild();
-		final Map<String, Job> result = new TreeMap<>();
-		for (final Element jobNode : DomUtils.getChildElementsByTagName(hudson, "job")) {
 
-			// Extract string data from this job
-			final String name = StringUtils.trimToEmpty(DomUtils.getChildElementValueByTagName(jobNode, "name"));
-			final String displayName = StringUtils
-					.trimToEmpty(DomUtils.getChildElementValueByTagName(jobNode, "displayName"));
-			final String description = StringUtils
-					.trimToEmpty(DomUtils.getChildElementValueByTagName(jobNode, "description"));
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode jsonNode = mapper.readTree(jobsAsInput);
 
-			// Check the values of this job
-			if (format.format(name).contains(formatCriteria) || format.format(displayName).contains(formatCriteria)
-					|| format.format(description).contains(formatCriteria)) {
+		ArrayNode jobsNode = (ArrayNode) jsonNode.get("repos");
 
-				// Retrieve description and display name
-				final Job job = new Job();
-				job.setName(StringUtils.trimToNull(displayName));
-				job.setDescription(StringUtils.trimToNull(description));
-				job.setId(name);
-				job.setStatus(toStatus(DomUtils.getChildElementValueByTagName(jobNode, "color")));
-				result.put(format.format(ObjectUtils.defaultIfNull(job.getName(), job.getId())), job);
-			}
-		}
-		return new ArrayList<>(result.values());
+		return StreamSupport.stream(jobsNode.spliterator(), false).map(item -> {
+			Job result = new Job();
+			result.setName(item.get("slug").asText());
+			result.setDescription(item.get("description").asText());
+			final String statusNode = StringUtils.defaultString(item.get("last_build_state").asText(), "red");
+			result.setStatus(toStatus(statusNode));
+			result.setLastBuildId(StringUtils.defaultString((item.get("last_build_id").asText())));
+			// result.setBuilding(statusNode.endsWith("_anime"));
+			result.setId(item.get("slug").asText());
+			return result;
+		}).collect(Collectors.toList());
 	}
 
 	/**
 	 * Return the color from the status of the job.
-	 * 
+	 *
 	 * @param status
 	 *            last status for the job
 	 * @return The color for the current status.
 	 */
 	private String toStatus(final String status) {
-		return "passed".equals(status)?"green":"red";
+		return "passed".equals(status) ? "green" : "started".equals(status) ? "yellow" : "red";
 	}
 
 	@Override
@@ -428,8 +385,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	}
 
 	@Override
-	public SubscriptionStatusWithData checkSubscriptionStatus(final Map<String, String> parameters)
-			throws Exception {
+	public SubscriptionStatusWithData checkSubscriptionStatus(final Map<String, String> parameters) throws Exception {
 		final SubscriptionStatusWithData nodeStatusWithData = new SubscriptionStatusWithData();
 		nodeStatusWithData.put("job", validateJob(parameters));
 		return nodeStatusWithData;
@@ -437,7 +393,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 
 	/**
 	 * Used to launch the job for the subscription.
-	 * 
+	 *
 	 * @param subscription
 	 *            the subscription to use to locate the Travis instance.
 	 * @throws Exception
@@ -450,26 +406,27 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 
 		// Check the instance is available
 		Job job = validateJob(parameters);
-		
-		if (job.getLastBuildId() == null || !build(parameters, job) ) {
+
+		if (job.getLastBuildId() == null || !build(parameters, job)) {
 			throw new BusinessException("Launching the job for the subscription {} failed.", subscription);
 		}
 	}
 
 	/**
 	 * Launch the job with the job.
-	 * 
+	 *
 	 * @param parameters
 	 *            Parameters used to define the job
 	 * @param job
-	 *           contains some information on the job as the last build id.
+	 *            contains some information on the job as the last build id.
 	 * @return The result of the processing.
 	 */
 	protected boolean build(final Map<String, String> parameters, final Job job) {
 		final CurlProcessor processor = new TravisCurlProcessor(parameters);
 		try {
 			final String travisBaseUrl = parameters.get(PARAMETER_URL);
-			return processor.process(new CurlRequest("POST", travisBaseUrl + "/builds/" + job.getLastBuildId() + "/restart", null));
+			return processor.process(
+					new CurlRequest("POST", travisBaseUrl + "/builds/" + job.getLastBuildId() + "/restart", null));
 		} finally {
 			processor.close();
 		}
