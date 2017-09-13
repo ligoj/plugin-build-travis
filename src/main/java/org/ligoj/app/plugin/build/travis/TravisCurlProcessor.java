@@ -2,35 +2,40 @@ package org.ligoj.app.plugin.build.travis;
 
 import java.util.Map;
 
+import org.ligoj.app.resource.plugin.CurlProcessor;
+import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.app.resource.plugin.DefaultHttpResponseCallback;
-import org.ligoj.app.resource.plugin.HttpResponseCallback;
-import org.ligoj.app.resource.plugin.SessionAuthCurlProcessor;
 
 /**
- * Jenkins processor.
+ * Travis processor.
  */
-public class TravisCurlProcessor extends SessionAuthCurlProcessor {
+public class TravisCurlProcessor extends CurlProcessor {
+
+	/**
+	 * Token used to communicate with api
+	 */
+	private String apiToken;
 
 	/**
 	 * Constructor using parameters set.
-	 * 
+	 *
 	 * @param parameters
 	 *            the Jenkins parameters.
 	 */
 	public TravisCurlProcessor(final Map<String, String> parameters) {
-		this(parameters, new DefaultHttpResponseCallback());
+		super(new DefaultHttpResponseCallback());
+		this.apiToken = parameters.get("api-token");
 	}
 
 	/**
-	 * Constructor using parameters set and callback.
-	 * 
-	 * @param parameters
-	 *            the Jenkins parameters.
-	 * @param callback
-	 *            Not <code>null</code> {@link HttpResponseCallback} used for each response.
+	 * Process the given request.
 	 */
-	public TravisCurlProcessor(final Map<String, String> parameters, final HttpResponseCallback callback) {
-		super(parameters.get(TravisPluginResource.PARAMETER_USER), parameters.get(TravisPluginResource.PARAMETER_TOKEN), callback);
+	@Override
+	protected boolean process(final CurlRequest request) {
+		request.getHeaders().put("Authorization", "token " + this.apiToken);
+		request.getHeaders().put("User-Agent", "MyClient/1.0.0");
+		request.getHeaders().put("Accept", "application/vnd.travis-ci.2+json");
+		return super.process(request);
 	}
 
 }

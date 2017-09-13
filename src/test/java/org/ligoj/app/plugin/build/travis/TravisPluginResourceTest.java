@@ -202,7 +202,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 
 		final Map<String, String> parameters = pvResource.getNodeParameters("service:build:travis:bpr");
 		parameters.put(TravisPluginResource.PARAMETER_JOB, "ligoj/plugin-vm-google");
-		checkJob(resource.validateJob(parameters), true, "yellow");
+		checkJob(resource.validateJob(parameters), false, "yellow");
 	}
 
 	private void checkJob(final Job job, final boolean building, final String status) {
@@ -330,7 +330,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	public void findJobsByIdSuccess() throws Exception {
 		addJobAccessBuilding();
 		httpServer.start();
-		checkJob(resource.findById("service:build:travis:bpr", "ligoj/plugin-vm-google"), true, "yellow");
+		checkJob(resource.findById("service:build:travis:bpr", "ligoj/plugin-vm-google"), false, "yellow");
 	}
 
 	@Test(expected = ValidationJsonException.class)

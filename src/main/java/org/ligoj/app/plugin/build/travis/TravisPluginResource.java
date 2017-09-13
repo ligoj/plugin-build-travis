@@ -33,7 +33,6 @@ import org.ligoj.app.resource.plugin.AbstractXmlApiToolPluginResource;
 import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.app.resource.plugin.HeaderHttpResponseCallback;
-import org.ligoj.app.resource.plugin.OnlyRedirectHttpResponseCallback;
 import org.ligoj.bootstrap.core.resource.BusinessException;
 import org.ligoj.bootstrap.core.validation.ValidationJsonException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -125,7 +124,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 			final String jenkinsBaseUrl = parameters.get(PARAMETER_URL);
 			final CurlRequest curlRequest = new CurlRequest(HttpMethod.POST,
 					jenkinsBaseUrl + "/job/" + encode(job) + "/doDelete", StringUtils.EMPTY);
-			if (!new TravisCurlProcessor(parameters, new OnlyRedirectHttpResponseCallback()).process(curlRequest)) {
+			if (!new TravisCurlProcessor(parameters).process(curlRequest)) {
 				throw new BusinessException("Deleting the job for the subscription {} failed.", subscription);
 			}
 		}
@@ -206,8 +205,10 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	public String getVersion(final Map<String, String> parameters) throws Exception {
 		// Check the user has enough rights to get the master configuration and
 		// get the master configuration and
-		return getResource(new TravisCurlProcessor(parameters, VERSION_CALLBACK), parameters.get(PARAMETER_URL),
-				"api/json?tree=numExecutors");
+		// return getResource(new TravisCurlProcessor(parameters,
+		// VERSION_CALLBACK), parameters.get(PARAMETER_URL),
+		// "api/json?tree=numExecutors");
+		return null;
 	}
 
 	/**
@@ -298,7 +299,14 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 				.collect(Collectors.toList());
 	}
 
-	public static Job transform(JsonNode item) {
+	/**
+	 * Transform the json content to an instance of <tt>Job</tt>.
+	 *
+	 * @param item
+	 *            Json Content describing a job
+	 * @return Instance of <tt>Job</tt>
+	 */
+	private static Job transform(JsonNode item) {
 		Job result = new Job();
 		result.setName(item.get("slug").asText());
 		result.setDescription(item.get("description").asText());

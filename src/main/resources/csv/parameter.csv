@@ -3,4 +3,3 @@ service:build:travis:url;service:build:travis;;true;TEXT;;
 service:build:travis:user;service:build:travis;;true;TEXT;;true
 service:build:travis:api-token;service:build:travis;;true;TEXT;;true
 service:build:travis:job;service:build:travis;;true;TEXT;;
-service:build:travis:template-job;service:build:travis;;true;TEXT;CREATE;
