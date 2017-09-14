@@ -1,2 +1,3 @@
 node.id;project.name
 service:build:travis:bpr;gStack
+service:build:travis:bpr;gStack2

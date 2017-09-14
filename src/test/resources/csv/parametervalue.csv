@@ -1,5 +1,5 @@
 parameter.id;data;node.id;subscription.id!
-service:build:travis:user;+yO5DXfq4dEABpj9gQTzSg==;service:build:travis:bpr;
 service:build:travis:api-token;SwhwVQpC7YXT2xrXHlHNOw==;service:build:travis:bpr;
-service:build:travis:url;http://localhost:8120;service:build:travis:bpr;
+service:build:travis:url-api;http://localhost:8120;service:build:travis:bpr;
+service:build:travis:url-site;http://localhost:8120;service:build:travis:bpr;
 service:build:travis:job;ligoj/plugin-vm-google;;1

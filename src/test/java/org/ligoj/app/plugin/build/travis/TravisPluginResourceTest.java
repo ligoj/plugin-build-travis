@@ -92,59 +92,8 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void deleteRemote() throws Exception {
-		addLoginAccess();
-		addAdminAccess();
-
-		// post delete
-		final UrlPattern deletePath = urlEqualTo("/job/gfi-bootstrap/doDelete");
-		httpServer.stubFor(post(deletePath).willReturn(
-				aResponse().withHeader("location", "location").withStatus(HttpStatus.SC_MOVED_TEMPORARILY)));
-		httpServer.start();
-
-		resource.delete(subscription, true);
-
-		// check that server has been called.
-		httpServer.verify(1, WireMock.postRequestedFor(deletePath));
-	}
-
-	@Test(expected = BusinessException.class)
-	public void deleteRemoteFailed() throws Exception {
-		addLoginAccess();
-		addAdminAccess();
-
-		// post delete
-		final UrlPattern deletePath = urlEqualTo("/job/gfi-bootstrap/doDelete");
-		httpServer.stubFor(post(deletePath).willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND)));
-		httpServer.start();
-
-		resource.delete(subscription, true);
-		// an error occured in this case.
-	}
-
-	@Test
 	public void getJenkinsResourceInvalidUrl() {
 		resource.getResource(new HashMap<>(), null);
-	}
-
-	@Test
-	public void getVersion() throws Exception {
-		addAdminAccess();
-		httpServer.start();
-		final String version = resource.getVersion(subscription);
-		Assert.assertEquals("1.574", version);
-	}
-
-	@Test
-	public void getLastVersion() throws Exception {
-		final String lastVersion = resource.getLastVersion();
-		Assert.assertNotNull(lastVersion);
-		Assert.assertTrue(lastVersion.compareTo("1.576") > 0);
-	}
-
-	@Test
-	public void getLastVersionFailed() throws Exception {
-		Assert.assertNull(resource.getLastVersion("any:some"));
 	}
 
 	@Test
@@ -162,25 +111,28 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 
 	@Test
 	public void link() throws Exception {
-		addLoginAccess();
-		addAdminAccess();
+		//addLoginAccess();
+		//addAdminAccess();
 		addJobAccess();
 		httpServer.start();
 
+		int gStack2 = getSubscription("gStack2");
+		
 		// Attach the Jenkins project identifier
 		final Parameter parameter = new Parameter();
 		parameter.setId(TravisPluginResource.PARAMETER_JOB);
-		final Subscription subscription = em.find(Subscription.class, this.subscription);
+		final Subscription subscriptionGstack2 = em.find(Subscription.class, gStack2);
+		
 		final ParameterValue parameterValue = new ParameterValue();
 		parameterValue.setParameter(parameter);
-		parameterValue.setData("gfi-bootstrap");
-		parameterValue.setSubscription(subscription);
+		parameterValue.setData("ligoj/plugin-vm-google");
+		parameterValue.setSubscription(subscriptionGstack2);
 		em.persist(parameterValue);
 		em.flush();
 
 		// Invoke create for an already created entity, since for now, there is
 		// nothing but validation pour jenkins
-		resource.link(this.subscription);
+		resource.link(gStack2);
 
 		// Nothing to validate for now...
 	}
@@ -192,7 +144,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 
 		final Map<String, String> parameters = pvResource.getNodeParameters("service:build:travis:bpr");
 		parameters.put(TravisPluginResource.PARAMETER_JOB, "ligoj/plugin-vm-google");
-		checkJob(resource.validateJob(parameters), false, "green");
+		checkJob(resource.validateJob(parameters), false, "blue");
 	}
 
 	@Test
@@ -216,13 +168,22 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 
 	@Test
 	public void checkStatus() throws Exception {
-		addLoginAccess();
-		addAdminAccess();
+		addConfigAccess();
 		httpServer.start();
 
 		final Map<String, String> parametersNoCheck = subscriptionResource.getParametersNoCheck(subscription);
 		parametersNoCheck.remove(TravisPluginResource.PARAMETER_JOB);
 		Assert.assertTrue(resource.checkStatus(parametersNoCheck));
+	}
+	
+	
+	@Test
+	public void checkStatusFailed() throws Exception {
+		httpServer.start();
+
+		final Map<String, String> parametersNoCheck = subscriptionResource.getParametersNoCheck(subscription);
+		parametersNoCheck.remove(TravisPluginResource.PARAMETER_JOB);
+		Assert.assertFalse(resource.checkStatus(parametersNoCheck));
 	}
 
 	@Test
@@ -233,7 +194,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 		final SubscriptionStatusWithData nodeStatusWithData = resource
 				.checkSubscriptionStatus(subscriptionResource.getParametersNoCheck(subscription));
 		Assert.assertTrue(nodeStatusWithData.getStatus().isUp());
-		checkJob((Job) nodeStatusWithData.getData().get("job"), false, "green");
+		checkJob((Job) nodeStatusWithData.getData().get("job"), false, "blue");
 	}
 
 	private void addJobAccess() throws IOException {
@@ -253,56 +214,13 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 								StandardCharsets.UTF_8))));
 	}
 
-	@Test
-	public void validateAdminAccess() throws Exception {
-		addLoginAccess();
-		addAdminAccess();
-		addJobAccess();
-		httpServer.start();
-
-		final String version = resource.validateAdminAccess(pvResource.getNodeParameters("service:build:jenkins:bpr"));
-		Assert.assertEquals("1.574", version);
-	}
-
-	private void addAdminAccess() throws IOException {
-		httpServer.stubFor(get(urlEqualTo("/api/json?tree=numExecutors"))
-				.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withHeader("x-jenkins", "1.574")
+	
+	private void addConfigAccess() throws IOException {
+		httpServer.stubFor(get(urlEqualTo("/config"))
+				.willReturn(aResponse().withStatus(HttpStatus.SC_OK)
 						.withBody(IOUtils.toString(
-								new ClassPathResource("mock-server/jenkins/jenkins-version.json").getInputStream(),
+								new ClassPathResource("mock-server/travis/travis-config.json").getInputStream(),
 								StandardCharsets.UTF_8))));
-	}
-
-	@Test
-	public void validateAdminAccessConnectivityFail() throws Exception {
-		thrown.expect(ValidationJsonException.class);
-		thrown.expect(MatcherUtil.validationMatcher(TravisPluginResource.PARAMETER_URL, "jenkins-connection"));
-		httpServer.stubFor(get(urlEqualTo("/login")).willReturn(aResponse().withStatus(HttpStatus.SC_BAD_GATEWAY)));
-		httpServer.start();
-
-		resource.validateAdminAccess(pvResource.getNodeParameters("service:build:jenkins:bpr"));
-	}
-
-	@Test
-	public void validateAdminAccessLoginFail() throws Exception {
-		thrown.expect(ValidationJsonException.class);
-		thrown.expect(MatcherUtil.validationMatcher(TravisPluginResource.PARAMETER_USER, "jenkins-login"));
-		httpServer.stubFor(get(urlEqualTo("/login")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)));
-		httpServer.stubFor(get(urlEqualTo("/api/xml")).willReturn(aResponse().withStatus(HttpStatus.SC_BAD_GATEWAY)));
-		httpServer.start();
-
-		resource.validateAdminAccess(pvResource.getNodeParameters("service:build:jenkins:bpr"));
-	}
-
-	@Test
-	public void validateAdminAccessNoRight() throws Exception {
-		thrown.expect(ValidationJsonException.class);
-		thrown.expect(MatcherUtil.validationMatcher(TravisPluginResource.PARAMETER_USER, "jenkins-rights"));
-		addLoginAccess();
-		httpServer.stubFor(get(urlEqualTo("/computer/(master)/config.xml"))
-				.willReturn(aResponse().withStatus(HttpStatus.SC_BAD_GATEWAY)));
-		httpServer.start();
-
-		resource.validateAdminAccess(pvResource.getNodeParameters("service:build:jenkins:bpr"));
 	}
 
 	@Test
@@ -323,7 +241,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 		Assert.assertEquals("Ligoj plugin for AWS EC2 instance life cycle management : scheduled ON/OFF",
 				jobs.get(1).getDescription());
 		Assert.assertEquals("ligoj/plugin-vm-aws", jobs.get(1).getId());
-		Assert.assertEquals("green", jobs.get(1).getStatus());
+		Assert.assertEquals("blue", jobs.get(1).getStatus());
 	}
 
 	@Test
@@ -341,21 +259,26 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 		resource.findById("service:build:travis:bpr", "ligoj/plugin-vm-googlee");
 	}
 
-	private void addLoginAccess() throws IOException {
-		httpServer.stubFor(get(urlEqualTo("/login")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)));
-		httpServer.stubFor(get(urlEqualTo("/api/xml")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(
-						new ClassPathResource("mock-server/jenkins/jenkins-api-xml.xml").getInputStream(),
-						StandardCharsets.UTF_8))));
-	}
-
 	@Test(expected = BusinessException.class)
 	public void buildFailed() throws Exception {
-		addLoginAccess();
-		addAdminAccess();
 		httpServer.start();
 		this.resource.build(subscription);
 	}
+	
+	@Test(expected = BusinessException.class)
+	public void buildFailedBecauseNoBuildAvailabled() throws Exception {
+		
+		httpServer.stubFor(
+				get(urlEqualTo("/repos/ligoj/plugin-vm-google")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+						.withBody(IOUtils.toString(
+								new ClassPathResource("mock-server/travis/travis-ligoj-vm-google-building-failed.json")
+										.getInputStream(),
+								StandardCharsets.UTF_8))));
+		
+		httpServer.start();
+		this.resource.build(subscription);
+	}
+	
 
 	@Test
 	public void build() throws Exception {

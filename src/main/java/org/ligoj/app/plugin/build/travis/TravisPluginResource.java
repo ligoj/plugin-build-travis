@@ -94,40 +94,13 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	/**
 	 * Web site URL
 	 */
-	public static final String PARAMETER_URL = KEY + ":url";
-
-	/**
-	 * Travis version callback to extract the header.
-	 */
-	private static final HeaderHttpResponseCallback VERSION_CALLBACK = new HeaderHttpResponseCallback("x-jenkins");
+	public static final String PARAMETER_URL = KEY + ":url-api";
 
 	@Override
 	public void link(final int subscription) throws Exception {
 		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
-
-		// Validate the node settings
-		validateAdminAccess(parameters);
-
 		// Validate the job settings
 		validateJob(parameters);
-	}
-
-	@Override
-	public void delete(final int subscription, final boolean deleteRemoteData) throws Exception {
-		if (deleteRemoteData) {
-			final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
-			// Validate the node settings
-			validateAdminAccess(parameters);
-
-			// delete the job
-			final String job = parameters.get(PARAMETER_JOB);
-			final String jenkinsBaseUrl = parameters.get(PARAMETER_URL);
-			final CurlRequest curlRequest = new CurlRequest(HttpMethod.POST,
-					jenkinsBaseUrl + "/job/" + encode(job) + "/doDelete", StringUtils.EMPTY);
-			if (!new TravisCurlProcessor(parameters).process(curlRequest)) {
-				throw new BusinessException("Deleting the job for the subscription {} failed.", subscription);
-			}
-		}
 	}
 
 	/**
@@ -159,32 +132,6 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	}
 
 	/**
-	 * Validate the basic REST connectivity to Jenkins.
-	 *
-	 * @param parameters
-	 *            the server parameters.
-	 * @return the detected Jenkins version.
-	 */
-	protected String validateAdminAccess(final Map<String, String> parameters) throws Exception {
-		CurlProcessor.validateAndClose(StringUtils.appendIfMissing(parameters.get(PARAMETER_URL), "/") + "login",
-				PARAMETER_URL, "jenkins-connection");
-
-		// Check the user can log-in to Jenkins with the preempted
-		// authentication processor
-		if (getResource(parameters, "api/xml") == null) {
-			throw new ValidationJsonException(PARAMETER_USER, "jenkins-login");
-		}
-
-		// Check the user has enough rights to get the master configuration and
-		// return the version
-		final String version = getVersion(parameters);
-		if (version == null) {
-			throw new ValidationJsonException(PARAMETER_USER, "jenkins-rights");
-		}
-		return version;
-	}
-
-	/**
 	 * Return a Jenkins's resource. Return <code>null</code> when the resource
 	 * is not found.
 	 */
@@ -199,34 +146,6 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	protected String getResource(final CurlProcessor processor, final String url, final String resource) {
 		// Get the resource using the preempted authentication
 		return processor.get(StringUtils.appendIfMissing(url, "/") + resource);
-	}
-
-	@Override
-	public String getVersion(final Map<String, String> parameters) throws Exception {
-		// Check the user has enough rights to get the master configuration and
-		// get the master configuration and
-		// return getResource(new TravisCurlProcessor(parameters,
-		// VERSION_CALLBACK), parameters.get(PARAMETER_URL),
-		// "api/json?tree=numExecutors");
-		return null;
-	}
-
-	/**
-	 * Search the Jenkin's template jobs matching to the given criteria. Name,
-	 * display name and description are considered.
-	 *
-	 * @param node
-	 *            the node to be tested with given parameters.
-	 * @param criteria
-	 *            the search criteria.
-	 * @return template job names matching the criteria.
-	 */
-	@GET
-	@Path("template/{node}/{criteria}")
-	@Consumes(MediaType.APPLICATION_JSON)
-	public List<Job> findAllTemplateByName(@PathParam("node") final String node,
-			@PathParam("criteria") final String criteria) throws Exception {
-		return findAllByName(node, criteria, "view/Templates/");
 	}
 
 	/**
@@ -326,7 +245,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 * @return The color for the current status.
 	 */
 	private static String toStatus(final String status) {
-		return "passed".equals(status) ? "green" : "started".equals(status) ? "yellow" : "red";
+		return "passed".equals(status) ? "blue" : "started".equals(status) ? "yellow" : "red";
 	}
 
 	@Override
@@ -335,36 +254,9 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	}
 
 	@Override
-	public String getLastVersion() throws Exception {
-		// Get the download index from the default repository
-		return getLastVersion(publicServer + "/war/");
-	}
-
-	/**
-	 * Return the last version available for Jenkins for the given repository
-	 * URL.
-	 */
-	protected String getLastVersion(final String repo) {
-		// Get the download index
-		final CurlProcessor processor = new CurlProcessor();
-		final String downloadPage = ObjectUtils.defaultIfNull(processor.get(repo), "");
-
-		// Find the last download link
-		final Matcher matcher = Pattern.compile("href=\"([\\d.]+)/\"").matcher(downloadPage);
-		String lastVersion = null;
-		while (matcher.find()) {
-			lastVersion = matcher.group(1);
-		}
-
-		// Return the last read version
-		return lastVersion;
-	}
-
-	@Override
 	public boolean checkStatus(final Map<String, String> parameters) throws Exception {
-		// Status is UP <=> Administration access is UP
-		validateAdminAccess(parameters);
-		return true;
+		// Try to obtain the configuration 
+		return getResource(parameters, "config") != null;
 	}
 
 	@Override
@@ -387,10 +279,14 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	public void build(@PathParam("subscription") final int subscription) throws URISyntaxException, IOException {
 		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
 
-		// Check the instance is available
-		Job job = validateJob(parameters);
-
-		if (job.getLastBuildId() == null || !build(parameters, job)) {
+		try{
+			// Check the instance is available
+			Job job = validateJob(parameters);
+	
+			if (job.getLastBuildId() == null || !build(parameters, job)) {
+				throw new BusinessException("Launching the job for the subscription {} failed.", subscription);
+			}
+		}catch(ValidationJsonException e){
 			throw new BusinessException("Launching the job for the subscription {} failed.", subscription);
 		}
 	}

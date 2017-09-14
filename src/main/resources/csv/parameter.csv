@@ -1,5 +1,5 @@
 id;owner.id;data;mandatory;type;mode;secured
-service:build:travis:url;service:build:travis;;true;TEXT;;
-service:build:travis:user;service:build:travis;;true;TEXT;;true
+service:build:travis:url-api;service:build:travis;;true;TEXT;;
+service:build:travis:url-site;service:build:travis;;true;TEXT;;
 service:build:travis:api-token;service:build:travis;;true;TEXT;;true
 service:build:travis:job;service:build:travis;;true;TEXT;;

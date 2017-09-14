@@ -1,0 +1,16 @@
+{
+   "repo":{
+      "id":12956184,
+      "slug":"ligoj/plugin-vm-google",
+      "active":true,
+      "description":"Ligoj plugin for Google instance life cycle management : scheduled ON/OFF",
+      "last_build_id":null,
+      "last_build_number":"9",
+      "last_build_state":"started",
+      "last_build_duration":151,
+      "last_build_language":null,
+      "last_build_started_at":"2017-09-12T11:58:43Z",
+      "last_build_finished_at":"2017-09-12T12:01:14Z",
+      "github_language":null
+   }
+}
