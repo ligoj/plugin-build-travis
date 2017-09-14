@@ -8,14 +8,11 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
-import javax.ws.rs.HttpMethod;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -23,7 +20,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.api.SubscriptionStatusWithData;
 import org.ligoj.app.iam.IamProvider;
@@ -32,7 +28,6 @@ import org.ligoj.app.plugin.build.BuildServicePlugin;
 import org.ligoj.app.resource.plugin.AbstractXmlApiToolPluginResource;
 import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.app.resource.plugin.CurlRequest;
-import org.ligoj.app.resource.plugin.HeaderHttpResponseCallback;
 import org.ligoj.bootstrap.core.resource.BusinessException;
 import org.ligoj.bootstrap.core.validation.ValidationJsonException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -179,7 +174,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	@Path("{node}/job/{id}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Job findById(@PathParam("node") final String node, @PathParam("id") final String id)
-			throws MalformedURLException, URISyntaxException, IOException {
+			throws URISyntaxException, IOException {
 		// Prepare the context, an ordered set of jobs
 		final Map<String, String> parameters = pvResource.getNodeParameters(node);
 		parameters.put(PARAMETER_JOB, id);
