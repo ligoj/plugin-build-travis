@@ -1,6 +1,6 @@
 define({
 	'root': {
-		'service:build:travis:job': 'Job',
+		'service:build:travis:job': 'Project',
 		'service:build:travis:url-api': 'URL Api',
 		'service:build:travis:url-site': 'URL',
 		'service:build:travis:user': 'User',

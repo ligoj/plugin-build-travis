@@ -1,5 +1,5 @@
 define({
-	'service:build:travis:job': 'Tâche',
+	'service:build:travis:job': 'Projet',
 	'service:build:travis:url-api': 'URL Api',
 	'service:build:travis:url-site': 'URL',
 	'service:build:travis:user': 'Utilisateur',
