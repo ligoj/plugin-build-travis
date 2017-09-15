@@ -69,52 +69,7 @@ define(function () {
 		},
 
 		configureSubscriptionParameters: function (configuration) {
-			if (configuration.mode === 'create') {
-				current.$super('registerXServiceSelect2')(configuration, 'service:build:travis:template-job', 'service/build/travis/template/');
-				configuration.validators['service:build:travis:job'] = current.validateJobCreateMode;
-			} else {
-				current.$super('registerXServiceSelect2')(configuration, 'service:build:travis:job', 'service/build/travis/');
-			}
-		},
-
-		/**
-		 * Live validation of job name.
-		 */
-		validateJobCreateMode: function () {
-			validationManager.reset(_('service:build:travis:job'));
-			var $input = _('service:build:travis:job');
-			var jobName = $input.val();
-			$input.closest('.form-group').find('.form-control-feedback').remove().end().addClass('has-feedback');
-			var pkey = current.$super('model').pkey;
-			if(jobName.match('^(?:'+ pkey + '|' + pkey + '-[a-z0-9]*)$') === null) {
-				validationManager.addError($input, {
-					rule: 'validation-job-name',
-					parameters: current.$super('model').pkey
-				}, 'job', true);
-				return false;
-			}
-			// Live validation to check the group does not exists
-			validationManager.addMessage($input, null, [], null, 'fa fa-refresh fa-spin');
-			$.ajax({
-				dataType: 'json',
-				url: REST_PATH + 'service/build/travis/' + current.$super('getSelectedNode')() + '/job/' + jobName,
-				type: 'GET',
-				global: false,
-				success: function () {
-					// Existing project
-					validationManager.addError(_('service:build:travis:job'), {
-						rule: 'already-exist',
-						parameters: [current.$messages['service:build:travis:job'], jobName]
-					}, 'job', true);
-				},
-				error: function() {
-					// Succeed, not existing project
-					validationManager.addSuccess(_('service:build:travis:job'), [], null, true);
-				}
-			});
-
-			// For now return true for the immediate validation system, even if the Ajax call may fail
-			return true;
+			current.$super('registerXServiceSelect2')(configuration, 'service:build:travis:job', 'service/build/travis/');
 		},
 
 		/**

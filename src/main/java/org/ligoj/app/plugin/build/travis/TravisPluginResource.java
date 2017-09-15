@@ -227,7 +227,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 		final String statusNode = StringUtils.defaultString(item.get("last_build_state").asText(), "red");
 		result.setStatus(toStatus(statusNode));
 		result.setLastBuildId(StringUtils.defaultString((item.get("last_build_id").asText())));
-		// result.setBuilding(statusNode.endsWith("_anime"));
+		result.setBuilding("started".equals(statusNode));
 		result.setId(item.get("slug").asText());
 		return result;
 	}
@@ -240,7 +240,18 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 * @return The color for the current status.
 	 */
 	private static String toStatus(final String status) {
-		return "passed".equals(status) ? "blue" : "started".equals(status) ? "yellow" : "red";
+		String toStatus;
+		switch(status){
+			case "passed":
+				toStatus = "blue";
+				break;
+			case "started":
+				toStatus = "yellow";
+				break;
+			default:
+				toStatus = "red";
+		}	
+		return toStatus;
 	}
 
 	@Override
