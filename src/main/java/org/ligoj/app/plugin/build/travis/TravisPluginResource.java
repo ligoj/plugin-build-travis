@@ -6,6 +6,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,7 +32,6 @@ import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.bootstrap.core.resource.BusinessException;
 import org.ligoj.bootstrap.core.validation.ValidationJsonException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -45,13 +45,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 @Service
 @Produces(MediaType.APPLICATION_JSON)
 public class TravisPluginResource extends AbstractXmlApiToolPluginResource implements BuildServicePlugin {
-
-	/**
-	 * Public server URL used to fetch the last available version of the
-	 * product.
-	 */
-	@Value("${service-build-jenkins-server:http://mirrors.jenkins-ci.org}")
-	private String publicServer;
 
 	@Autowired
 	protected IamProvider[] iamProvider;
@@ -90,6 +83,16 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 * Web site URL
 	 */
 	public static final String PARAMETER_URL = KEY + ":url-api";
+
+	/**
+	 * Travis code to status color. Default color is "red".
+	 */
+	public static final Map<String, String> CODE_TO_STATUS = new HashMap<>();
+
+	static {
+		CODE_TO_STATUS.put("passed", "blue");
+		CODE_TO_STATUS.put("started", "yellow");
+	}
 
 	@Override
 	public void link(final int subscription) throws Exception {
@@ -156,8 +159,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	@GET
 	@Path("{node}/{criteria}")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public List<Job> findAllByName(@PathParam("node") final String node, @PathParam("criteria") final String criteria)
-			throws Exception {
+	public List<Job> findAllByName(@PathParam("node") final String node, @PathParam("criteria") final String criteria) throws Exception {
 		return findAllByName(node, criteria, null);
 	}
 
@@ -173,8 +175,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	@GET
 	@Path("{node}/job/{id}")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public Job findById(@PathParam("node") final String node, @PathParam("id") final String id)
-			throws URISyntaxException, IOException {
+	public Job findById(@PathParam("node") final String node, @PathParam("id") final String id) throws URISyntaxException, IOException {
 		// Prepare the context, an ordered set of jobs
 		final Map<String, String> parameters = pvResource.getNodeParameters(node);
 		parameters.put(PARAMETER_JOB, id);
@@ -209,8 +210,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 
 		ArrayNode jobsNode = (ArrayNode) jsonNode.get("repos");
 
-		return StreamSupport.stream(jobsNode.spliterator(), false).map(TravisPluginResource::transform)
-				.collect(Collectors.toList());
+		return StreamSupport.stream(jobsNode.spliterator(), false).map(TravisPluginResource::transform).collect(Collectors.toList());
 	}
 
 	/**
@@ -240,18 +240,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 * @return The color for the current status.
 	 */
 	private static String toStatus(final String status) {
-		String toStatus;
-		switch(status){
-			case "passed":
-				toStatus = "blue";
-				break;
-			case "started":
-				toStatus = "yellow";
-				break;
-			default:
-				toStatus = "red";
-		}	
-		return toStatus;
+		return CODE_TO_STATUS.getOrDefault(status, "red");
 	}
 
 	@Override
@@ -261,7 +250,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 
 	@Override
 	public boolean checkStatus(final Map<String, String> parameters) throws Exception {
-		// Try to obtain the configuration 
+		// Try to obtain the configuration
 		return getResource(parameters, "config") != null;
 	}
 
@@ -285,14 +274,14 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	public void build(@PathParam("subscription") final int subscription) throws URISyntaxException, IOException {
 		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
 
-		try{
+		try {
 			// Check the instance is available
 			Job job = validateJob(parameters);
-	
+
 			if (job.getLastBuildId() == null || !build(parameters, job)) {
 				throw new BusinessException("Launching the job for the subscription {} failed.", subscription);
 			}
-		}catch(ValidationJsonException e){
+		} catch (ValidationJsonException e) {
 			throw new BusinessException("Launching the job for the subscription {} failed.", subscription);
 		}
 	}
@@ -310,8 +299,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 		final CurlProcessor processor = new TravisCurlProcessor(parameters);
 		try {
 			final String travisBaseUrl = parameters.get(PARAMETER_URL);
-			return processor.process(
-					new CurlRequest("POST", travisBaseUrl + "/builds/" + job.getLastBuildId() + "/restart", null));
+			return processor.process(new CurlRequest("POST", travisBaseUrl + "/builds/" + job.getLastBuildId() + "/restart", null));
 		} finally {
 			processor.close();
 		}
