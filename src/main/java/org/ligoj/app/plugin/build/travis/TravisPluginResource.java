@@ -23,7 +23,6 @@ import javax.ws.rs.core.MediaType;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.api.SubscriptionStatusWithData;
-import org.ligoj.app.iam.IamProvider;
 import org.ligoj.app.plugin.build.BuildResource;
 import org.ligoj.app.plugin.build.BuildServicePlugin;
 import org.ligoj.app.resource.plugin.AbstractXmlApiToolPluginResource;
@@ -45,9 +44,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 @Service
 @Produces(MediaType.APPLICATION_JSON)
 public class TravisPluginResource extends AbstractXmlApiToolPluginResource implements BuildServicePlugin {
-
-	@Autowired
-	protected IamProvider[] iamProvider;
 
 	/**
 	 * Plug-in key.
@@ -87,12 +83,16 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	/**
 	 * Travis code to status color. Default color is "red".
 	 */
-	public static final Map<String, String> CODE_TO_STATUS = new HashMap<>();
+	private static final Map<String, String> CODE_TO_STATUS = new HashMap<>();
+	
 
 	static {
 		CODE_TO_STATUS.put("passed", "blue");
 		CODE_TO_STATUS.put("started", "yellow");
 	}
+
+	@Autowired
+	private ObjectMapper objectMapper;
 
 	@Override
 	public void link(final int subscription) throws Exception {
@@ -117,8 +117,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 			throw new ValidationJsonException(PARAMETER_JOB, "travis-job", job);
 		}
 
-		ObjectMapper mapper = new ObjectMapper();
-		JsonNode node = mapper.readTree(jobJson);
+		final JsonNode node = objectMapper.readTree(jobJson);
 
 		// Retrieve description, status and display name
 		JsonNode repo = node.get("repo");
@@ -159,7 +158,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	@GET
 	@Path("{node}/{criteria}")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public List<Job> findAllByName(@PathParam("node") final String node, @PathParam("criteria") final String criteria) throws Exception {
+	public List<Job> findAllByName(@PathParam("node") final String node, @PathParam("criteria") final String criteria) throws IOException {
 		return findAllByName(node, criteria, null);
 	}
 
@@ -194,10 +193,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 *            The optional view URL.
 	 * @return job names matching the criteria.
 	 */
-	private List<Job> findAllByName(final String node, final String criteria, final String view) throws Exception { // NOSONAR
-																													// Too
-																													// many
-																													// exceptions
+	private List<Job> findAllByName(final String node, final String criteria, final String view) throws IOException {
 
 		final Map<String, String> parameters = pvResource.getNodeParameters(node);
 
@@ -226,7 +222,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 		result.setDescription(item.get("description").asText());
 		final String statusNode = StringUtils.defaultString(item.get("last_build_state").asText(), "red");
 		result.setStatus(toStatus(statusNode));
-		result.setLastBuildId(StringUtils.defaultString((item.get("last_build_id").asText())));
+		result.setLastBuildId(StringUtils.defaultString((item.get("last_build_id").asText(null))));
 		result.setBuilding("started".equals(statusNode));
 		result.setId(item.get("slug").asText());
 		return result;
@@ -276,7 +272,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 
 		try {
 			// Check the instance is available
-			Job job = validateJob(parameters);
+			final Job job = validateJob(parameters);
 
 			if (job.getLastBuildId() == null || !build(parameters, job)) {
 				throw new BusinessException("Launching the job for the subscription {} failed.", subscription);
