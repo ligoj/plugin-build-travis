@@ -257,7 +257,16 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test(expected = BusinessException.class)
+	public void buildNotExists() throws Exception {
+		httpServer.start();
+		this.resource.build(subscription);
+	}
+
+	@Test(expected = BusinessException.class)
 	public void buildFailed() throws Exception {
+		addJobAccess();
+		httpServer.stubFor(
+				post(urlEqualTo("/builds/274572860/restart")).willReturn(aResponse().withStatus(HttpStatus.SC_FORBIDDEN)));
 		httpServer.start();
 		this.resource.build(subscription);
 	}

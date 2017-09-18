@@ -120,8 +120,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 		final JsonNode node = objectMapper.readTree(jobJson);
 
 		// Retrieve description, status and display name
-		JsonNode repo = node.get("repo");
-		return transform(repo);
+		return transform(node.get("repo"));
 	}
 
 	private String encode(final String job) throws MalformedURLException, URISyntaxException {
@@ -222,7 +221,7 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 		result.setDescription(item.get("description").asText());
 		final String statusNode = StringUtils.defaultString(item.get("last_build_state").asText(), "red");
 		result.setStatus(toStatus(statusNode));
-		result.setLastBuildId(StringUtils.defaultString((item.get("last_build_id").asText(null))));
+		result.setLastBuildId((item.get("last_build_id").asText(null)));
 		result.setBuilding("started".equals(statusNode));
 		result.setId(item.get("slug").asText());
 		return result;
