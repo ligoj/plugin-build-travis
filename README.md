@@ -15,4 +15,5 @@
 
 [Ligoj](https://github.com/ligoj/ligoj) Travis CI plugin, and extending [Build plugin](https://github.com/ligoj/plugin-build)
 Provides the following features :
-- TODO 
+- Job status
+- Start a job 
