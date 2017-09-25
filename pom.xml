@@ -17,7 +17,7 @@
 	<scm>
 		<connection>scm:git:https://github.com/ligoj/plugin-build-travis</connection>
 		<developerConnection>scm:git:https://github.com/ligoj/plugin-build-travis</developerConnection>
-		<url>https://github.com/ligoj/plugin-prov-travis.git</url>
+		<url>https://github.com/ligoj/plugin-build-travis.git</url>
 	</scm>
 
 	<profiles>
