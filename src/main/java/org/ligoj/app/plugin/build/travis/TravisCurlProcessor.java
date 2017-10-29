@@ -26,7 +26,7 @@ public class TravisCurlProcessor extends CurlProcessor {
 	 */
 	public TravisCurlProcessor(final Map<String, String> parameters) {
 		super(new DefaultHttpResponseCallback());
-		this.apiToken = parameters.get("service:build:travis:api-token");
+		this.apiToken = parameters.get(TravisPluginResource.PARAMETER_TOKEN);
 	}
 
 	/**
