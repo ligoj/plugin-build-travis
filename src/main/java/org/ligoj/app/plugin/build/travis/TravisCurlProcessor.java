@@ -33,7 +33,7 @@ public class TravisCurlProcessor extends CurlProcessor {
 	@Override
 	protected boolean process(final CurlRequest request) {
 		request.getHeaders().put("Authorization", "token " + this.apiToken);
-		request.getHeaders().put("User-Agent", "MyClient/1.0.0");
+		request.getHeaders().put("User-Agent", "Ligoj/1.0.0");
 		request.getHeaders().put("Accept", "application/vnd.travis-ci.2+json");
 		return super.process(request);
 	}
