@@ -84,7 +84,6 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 * Travis code to status color. Default color is "red".
 	 */
 	private static final Map<String, String> CODE_TO_STATUS = new HashMap<>();
-	
 
 	static {
 		CODE_TO_STATUS.put("passed", "blue");
@@ -141,7 +140,11 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 */
 	protected String getResource(final CurlProcessor processor, final String url, final String resource) {
 		// Get the resource using the preempted authentication
-		return processor.get(StringUtils.appendIfMissing(url, "/") + resource);
+		final CurlRequest request = new CurlRequest("GET", StringUtils.appendIfMissing(url, "/") + resource, null);
+		request.setSaveResponse(true);
+		processor.process(request);
+		// TODO Handle 403 response with ligoj-api 1.1.9+
+		return request.getResponse();
 	}
 
 	/**
@@ -193,18 +196,14 @@ public class TravisPluginResource extends AbstractXmlApiToolPluginResource imple
 	 * @return job names matching the criteria.
 	 */
 	private List<Job> findAllByName(final String node, final String criteria, final String view) throws IOException {
-
 		final Map<String, String> parameters = pvResource.getNodeParameters(node);
 
 		// Get the jobs and parse them
 		final String url = StringUtils.trimToEmpty(view) + "repos?search=" + criteria + "&orderBy=name&limit=10";
-		final InputStream jobsAsInput = IOUtils.toInputStream(getResource(parameters, url), StandardCharsets.UTF_8);
-
-		ObjectMapper mapper = new ObjectMapper();
-		JsonNode jsonNode = mapper.readTree(jobsAsInput);
-
-		ArrayNode jobsNode = (ArrayNode) jsonNode.get("repos");
-
+		final InputStream jobsAsInput = IOUtils.toInputStream(StringUtils.defaultString(getResource(parameters, url), "{\"repos\":[]}"),
+				StandardCharsets.UTF_8);
+		final JsonNode jsonNode = objectMapper.readTree(jobsAsInput);
+		final ArrayNode jobsNode = (ArrayNode) jsonNode.get("repos");
 		return StreamSupport.stream(jobsNode.spliterator(), false).map(TravisPluginResource::transform).collect(Collectors.toList());
 	}
 

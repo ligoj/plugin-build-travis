@@ -242,6 +242,14 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
+	public void findJobsByNameAuthFailed() throws Exception {
+		// All queries would fail
+		httpServer.start();
+
+		Assert.assertEquals(0, resource.findAllByName("service:build:travis:bpr", "ligo").size());
+	}
+
+	@Test
 	public void findJobsByIdSuccess() throws Exception {
 		addJobAccessBuilding();
 		httpServer.start();
@@ -250,10 +258,10 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 
 	@Test(expected = ValidationJsonException.class)
 	public void findJobsByIdFail() throws Exception {
-		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/plugin-vm-googlee"))
+		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/any"))
 				.willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND).withBody("{\"file\":\"not found\"}")));
 		httpServer.start();
-		resource.findById("service:build:travis:bpr", "ligoj/plugin-vm-googlee");
+		resource.findById("service:build:travis:bpr", "ligoj/any");
 	}
 
 	@Test(expected = BusinessException.class)
