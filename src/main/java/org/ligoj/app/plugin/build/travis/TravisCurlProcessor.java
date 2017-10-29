@@ -8,11 +8,13 @@ import org.ligoj.app.resource.plugin.DefaultHttpResponseCallback;
 
 /**
  * Travis processor.
+ * 
+ * @see https://docs.travis-ci.com/api/
  */
 public class TravisCurlProcessor extends CurlProcessor {
 
 	/**
-	 * Token used to communicate with api
+	 * Token used to communicate with API.
 	 */
 	private String apiToken;
 
@@ -20,7 +22,7 @@ public class TravisCurlProcessor extends CurlProcessor {
 	 * Constructor using parameters set.
 	 *
 	 * @param parameters
-	 *            the Jenkins parameters.
+	 *            the Travis parameters.
 	 */
 	public TravisCurlProcessor(final Map<String, String> parameters) {
 		super(new DefaultHttpResponseCallback());
