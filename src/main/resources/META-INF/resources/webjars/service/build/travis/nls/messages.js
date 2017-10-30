@@ -6,7 +6,7 @@ define({
 		'service:build:travis:url-api-description': 'API endpoint to use, see <a href="https://docs.travis-ci.com/api">docs.travis-ci.com</a>',
 		'service:build:travis:url-site': 'URL',
 		'service:build:travis:url-site-description': 'Web URL. For open source projects use https://travis-ci.org/',
-		'service:build:travis:api-token': 'API Token',
+		'service:build:travis:api-token': 'Access token',
 		'service:build:travis:api-token-description': 'Execute : gem install travis && travis login && travis token',
 		'service:build:travis:build': 'Build',
 		'service:build:travis:status-blue': 'Success',
