@@ -18,10 +18,10 @@ import javax.transaction.Transactional;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.ligoj.app.AbstractServerTest;
 import org.ligoj.app.MatcherUtil;
 import org.ligoj.app.api.SubscriptionStatusWithData;
@@ -41,12 +41,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
  * Test class of {@link TravisPluginResource}
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @ContextConfiguration(locations = "classpath:/META-INF/spring/application-context-test.xml")
 @Rollback
 @Transactional
@@ -62,11 +62,12 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 
 	protected int subscription;
 
-	@Before
+	@BeforeEach
 	public void prepareData() throws IOException {
 		// Only with Spring context
-		persistEntities("csv", new Class[] { Node.class, Parameter.class, Project.class, Subscription.class,
-				ParameterValue.class, DelegateOrg.class }, StandardCharsets.UTF_8.name());
+		persistEntities("csv",
+				new Class[] { Node.class, Parameter.class, Project.class, Subscription.class, ParameterValue.class, DelegateOrg.class },
+				StandardCharsets.UTF_8.name());
 		this.subscription = getSubscription("gStack");
 
 		// Coverage only
@@ -94,32 +95,31 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void validateJobNotFound() throws IOException, URISyntaxException {
-		thrown.expect(ValidationJsonException.class);
-		thrown.expect(MatcherUtil.validationMatcher(TravisPluginResource.PARAMETER_JOB, "travis-job"));
-		httpServer.stubFor(
-				get(urlEqualTo("/repos/gfi/bootstrap")).willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND)));
+	public void validateJobNotFound() {
+		httpServer.stubFor(get(urlEqualTo("/repos/gfi/bootstrap")).willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND)));
 		httpServer.start();
 
 		final Map<String, String> parameters = pvResource.getNodeParameters("service:build:travis:bpr");
 		parameters.put(TravisPluginResource.PARAMETER_JOB, "gfi/bootstrap");
-		resource.validateJob(parameters);
+		MatcherUtil.assertThrows(Assertions.assertThrows(ValidationJsonException.class, () -> {
+			resource.validateJob(parameters);
+		}), TravisPluginResource.PARAMETER_JOB, "travis-job");
 	}
 
 	@Test
 	public void link() throws Exception {
-		//addLoginAccess();
-		//addAdminAccess();
+		// addLoginAccess();
+		// addAdminAccess();
 		addJobAccess();
 		httpServer.start();
 
 		int gStack2 = getSubscription("gStack2");
-		
+
 		// Attach the Jenkins project identifier
 		final Parameter parameter = new Parameter();
 		parameter.setId(TravisPluginResource.PARAMETER_JOB);
 		final Subscription subscriptionGstack2 = em.find(Subscription.class, gStack2);
-		
+
 		final ParameterValue parameterValue = new ParameterValue();
 		parameterValue.setParameter(parameter);
 		parameterValue.setData("ligoj/plugin-vm-google");
@@ -155,12 +155,11 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	private void checkJob(final Job job, final boolean building, final String status) {
-		Assert.assertEquals("ligoj/plugin-vm-google", job.getId());
-		Assert.assertEquals("ligoj/plugin-vm-google", job.getName());
-		Assert.assertEquals("Ligoj plugin for Google instance life cycle management : scheduled ON/OFF",
-				job.getDescription());
-		Assert.assertEquals(status, job.getStatus());
-		Assert.assertEquals(building, job.isBuilding());
+		Assertions.assertEquals("ligoj/plugin-vm-google", job.getId());
+		Assertions.assertEquals("ligoj/plugin-vm-google", job.getName());
+		Assertions.assertEquals("Ligoj plugin for Google instance life cycle management : scheduled ON/OFF", job.getDescription());
+		Assertions.assertEquals(status, job.getStatus());
+		Assertions.assertEquals(building, job.isBuilding());
 	}
 
 	@Test
@@ -170,17 +169,16 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 
 		final Map<String, String> parametersNoCheck = subscriptionResource.getParametersNoCheck(subscription);
 		parametersNoCheck.remove(TravisPluginResource.PARAMETER_JOB);
-		Assert.assertTrue(resource.checkStatus(parametersNoCheck));
+		Assertions.assertTrue(resource.checkStatus(parametersNoCheck));
 	}
-	
-	
+
 	@Test
 	public void checkStatusFailed() throws Exception {
 		httpServer.start();
 
 		final Map<String, String> parametersNoCheck = subscriptionResource.getParametersNoCheck(subscription);
 		parametersNoCheck.remove(TravisPluginResource.PARAMETER_JOB);
-		Assert.assertFalse(resource.checkStatus(parametersNoCheck));
+		Assertions.assertFalse(resource.checkStatus(parametersNoCheck));
 	}
 
 	@Test
@@ -190,55 +188,44 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 
 		final SubscriptionStatusWithData nodeStatusWithData = resource
 				.checkSubscriptionStatus(subscriptionResource.getParametersNoCheck(subscription));
-		Assert.assertTrue(nodeStatusWithData.getStatus().isUp());
+		Assertions.assertTrue(nodeStatusWithData.getStatus().isUp());
 		checkJob((Job) nodeStatusWithData.getData().get("job"), false, "blue");
 	}
 
 	private void addJobAccess() throws IOException {
-		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/plugin-vm-google")).willReturn(aResponse()
-				.withStatus(HttpStatus.SC_OK)
-				.withBody(IOUtils.toString(
-						new ClassPathResource("mock-server/travis/travis-ligoj-vm-google-config.json").getInputStream(),
+		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/plugin-vm-google")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(new ClassPathResource("mock-server/travis/travis-ligoj-vm-google-config.json").getInputStream(),
 						StandardCharsets.UTF_8))));
 	}
 
 	private void addJobAccessBuilding() throws IOException {
-		httpServer.stubFor(
-				get(urlEqualTo("/repos/ligoj/plugin-vm-google")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-						.withBody(IOUtils.toString(
-								new ClassPathResource("mock-server/travis/travis-ligoj-vm-google-building.json")
-										.getInputStream(),
-								StandardCharsets.UTF_8))));
+		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/plugin-vm-google")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+				IOUtils.toString(new ClassPathResource("mock-server/travis/travis-ligoj-vm-google-building.json").getInputStream(),
+						StandardCharsets.UTF_8))));
 	}
 
-	
 	private void addConfigAccess() throws IOException {
-		httpServer.stubFor(get(urlEqualTo("/config"))
-				.willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-						.withBody(IOUtils.toString(
-								new ClassPathResource("mock-server/travis/travis-config.json").getInputStream(),
-								StandardCharsets.UTF_8))));
+		httpServer.stubFor(get(urlEqualTo("/config")).willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils
+				.toString(new ClassPathResource("mock-server/travis/travis-config.json").getInputStream(), StandardCharsets.UTF_8))));
 	}
 
 	@Test
 	public void findJobsByName() throws Exception {
 		httpServer
-				.stubFor(get(urlPathEqualTo("/repos")).withQueryParam("search", equalTo("ligo"))
-						.withQueryParam("orderBy", equalTo("name")).withQueryParam("limit", equalTo("10"))
-						.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(IOUtils.toString(
-								new ClassPathResource("mock-server/travis/travis-find-job.json")
-										.getInputStream(),
-								StandardCharsets.UTF_8))));
+				.stubFor(get(urlPathEqualTo("/repos")).withQueryParam("search", equalTo("ligo")).withQueryParam("orderBy", equalTo("name"))
+						.withQueryParam("limit", equalTo("10"))
+						.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
+								IOUtils.toString(new ClassPathResource("mock-server/travis/travis-find-job.json").getInputStream(),
+										StandardCharsets.UTF_8))));
 
 		httpServer.start();
 
 		final List<Job> jobs = resource.findAllByName("service:build:travis:bpr", "ligo");
-		Assert.assertEquals(5, jobs.size());
-		Assert.assertEquals("ligoj/plugin-vm-aws", jobs.get(1).getName());
-		Assert.assertEquals("Ligoj plugin for AWS EC2 instance life cycle management : scheduled ON/OFF",
-				jobs.get(1).getDescription());
-		Assert.assertEquals("ligoj/plugin-vm-aws", jobs.get(1).getId());
-		Assert.assertEquals("blue", jobs.get(1).getStatus());
+		Assertions.assertEquals(5, jobs.size());
+		Assertions.assertEquals("ligoj/plugin-vm-aws", jobs.get(1).getName());
+		Assertions.assertEquals("Ligoj plugin for AWS EC2 instance life cycle management : scheduled ON/OFF", jobs.get(1).getDescription());
+		Assertions.assertEquals("ligoj/plugin-vm-aws", jobs.get(1).getId());
+		Assertions.assertEquals("blue", jobs.get(1).getStatus());
 	}
 
 	@Test
@@ -246,7 +233,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 		// All queries would fail
 		httpServer.start();
 
-		Assert.assertEquals(0, resource.findAllByName("service:build:travis:bpr", "ligo").size());
+		Assertions.assertEquals(0, resource.findAllByName("service:build:travis:bpr", "ligo").size());
 	}
 
 	@Test
@@ -256,60 +243,65 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 		checkJob(resource.findById("service:build:travis:bpr", "ligoj/plugin-vm-google"), true, "yellow");
 	}
 
-	@Test(expected = ValidationJsonException.class)
+	@Test
 	public void findJobsByIdFail() throws Exception {
 		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/any"))
 				.willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND).withBody("{\"file\":\"not found\"}")));
 		httpServer.start();
-		resource.findById("service:build:travis:bpr", "ligoj/any");
+		MatcherUtil.assertThrows(Assertions.assertThrows(ValidationJsonException.class, () -> {
+			resource.findById("service:build:travis:bpr", "ligoj/any");
+		}), TravisPluginResource.PARAMETER_JOB, "travis-job");
 	}
 
-	@Test(expected = BusinessException.class)
+	@Test
 	public void buildNotExists() throws Exception {
 		httpServer.start();
-		this.resource.build(subscription);
+		Assertions.assertEquals(Assertions.assertThrows(BusinessException.class, () -> {
+			this.resource.build(subscription);
+		}).getMessage(), "Launching the job for the subscription {} failed.");
 	}
 
-	@Test(expected = BusinessException.class)
+	@Test
 	public void buildFailed() throws Exception {
 		addJobAccess();
-		httpServer.stubFor(
-				post(urlEqualTo("/builds/274572860/restart")).willReturn(aResponse().withStatus(HttpStatus.SC_FORBIDDEN)));
+		httpServer.stubFor(post(urlEqualTo("/builds/274572860/restart")).willReturn(aResponse().withStatus(HttpStatus.SC_FORBIDDEN)));
 		httpServer.start();
-		this.resource.build(subscription);
+		Assertions.assertEquals(Assertions.assertThrows(BusinessException.class, () -> {
+			this.resource.build(subscription);
+		}).getMessage(), "Launching the job for the subscription {} failed.");
 	}
-	
-	@Test(expected = BusinessException.class)
+
+	@Test
 	public void buildFailedBecauseNoBuildAvailabled() throws Exception {
-		
-		httpServer.stubFor(
-				get(urlEqualTo("/repos/ligoj/plugin-vm-google")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
-						.withBody(IOUtils.toString(
-								new ClassPathResource("mock-server/travis/travis-ligoj-vm-google-building-failed.json")
-										.getInputStream(),
-								StandardCharsets.UTF_8))));
-		
+
+		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/plugin-vm-google")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
+				.withBody(IOUtils.toString(
+						new ClassPathResource("mock-server/travis/travis-ligoj-vm-google-building-failed.json").getInputStream(),
+						StandardCharsets.UTF_8))));
+
 		httpServer.start();
-		this.resource.build(subscription);
+		Assertions.assertEquals(Assertions.assertThrows(BusinessException.class, () -> {
+			this.resource.build(subscription);
+		}).getMessage(), "Launching the job for the subscription {} failed.");
 	}
-	
 
 	@Test
 	public void build() throws Exception {
 		addJobAccess();
-		httpServer.stubFor(
-				post(urlEqualTo("/builds/274572860/restart")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)));
+		httpServer.stubFor(post(urlEqualTo("/builds/274572860/restart")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)));
 		httpServer.start();
 		this.resource.build(subscription);
 	}
 
-	@Test(expected = RuntimeException.class)
+	@Test
 	public void buildInvalidUrl() throws Exception {
 		Map<String, String> map = Mockito.mock(Map.class);
 		Mockito.when(map.get(TravisPluginResource.PARAMETER_USER)).thenReturn("some");
 		Mockito.when(map.get(TravisPluginResource.PARAMETER_TOKEN)).thenReturn("some");
-		Mockito.when(map.get(TravisPluginResource.PARAMETER_URL)).thenThrow(new RuntimeException());
-		this.resource.build(map, null);
+		Mockito.when(map.get(TravisPluginResource.PARAMETER_URL)).thenThrow(new RuntimeException("some"));
+		Assertions.assertEquals(Assertions.assertThrows(RuntimeException.class, () -> {
+			this.resource.build(map, null);
+		}).getMessage(), "some");
 	}
 
 }

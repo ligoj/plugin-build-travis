@@ -25,7 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.api.SubscriptionStatusWithData;
 import org.ligoj.app.plugin.build.BuildResource;
 import org.ligoj.app.plugin.build.BuildServicePlugin;
-import org.ligoj.app.resource.plugin.AbstractXmlApiToolPluginResource;
+import org.ligoj.app.resource.plugin.AbstractToolPluginResource;
 import org.ligoj.app.resource.plugin.CurlProcessor;
 import org.ligoj.app.resource.plugin.CurlRequest;
 import org.ligoj.bootstrap.core.resource.BusinessException;
@@ -43,7 +43,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 @Path(TravisPluginResource.URL)
 @Service
 @Produces(MediaType.APPLICATION_JSON)
-public class TravisPluginResource extends AbstractXmlApiToolPluginResource implements BuildServicePlugin {
+public class TravisPluginResource extends AbstractToolPluginResource implements BuildServicePlugin {
 
 	/**
 	 * Plug-in key.
