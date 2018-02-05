@@ -243,7 +243,7 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	}
 
 	@Override
-	public boolean checkStatus(final Map<String, String> parameters) throws Exception {
+	public boolean checkStatus(final Map<String, String> parameters) {
 		// Try to obtain the configuration
 		return getResource(parameters, "config") != null;
 	}

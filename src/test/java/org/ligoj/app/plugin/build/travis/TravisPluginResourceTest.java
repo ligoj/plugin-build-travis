@@ -173,7 +173,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void checkStatusFailed() throws Exception {
+	public void checkStatusFailed() {
 		httpServer.start();
 
 		final Map<String, String> parametersNoCheck = subscriptionResource.getParametersNoCheck(subscription);
@@ -244,7 +244,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void findJobsByIdFail() throws Exception {
+	public void findJobsByIdFail() {
 		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/any"))
 				.willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND).withBody("{\"file\":\"not found\"}")));
 		httpServer.start();
@@ -254,7 +254,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void buildNotExists() throws Exception {
+	public void buildNotExists() {
 		httpServer.start();
 		Assertions.assertEquals(Assertions.assertThrows(BusinessException.class, () -> {
 			this.resource.build(subscription);
@@ -294,7 +294,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void buildInvalidUrl() throws Exception {
+	public void buildInvalidUrl() {
 		@SuppressWarnings("unchecked")
 		final Map<String, String> map = Mockito.mock(Map.class);
 		Mockito.when(map.get(TravisPluginResource.PARAMETER_USER)).thenReturn("some");
