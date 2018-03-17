@@ -16,10 +16,10 @@ define(function () {
 		 * @type {Object} {String} to {String}
 		 */
 		jobStatusTypo: {
-			blue: 'fa fa-circle',
-			red: 'fa fa-circle',
-			disabled: 'fa fa-ban',
-			yellow: 'fa fa-circle'
+			blue: 'fas fa-circle',
+			red: 'fas fa-circle',
+			disabled: 'fas fa-ban',
+			yellow: 'fas fa-circle'
 		},
 
 		initialize: function () {
@@ -38,7 +38,7 @@ define(function () {
 		 */
 		renderFeatures: function (subscription) {
 			var result = current.$super('renderServicelink')('home', subscription.parameters['service:build:travis:url-site'] + subscription.parameters['service:build:travis:job'], 'service:build:travis:job', undefined, ' target="_blank"');
-			result += '<button class="service-build-travis-build btn-link"><i class="fa fa-play" data-toggle="tooltip" title="' + current.$messages['service:build:travis:build'] + '"></i></button>';
+			result += '<button class="service-build-travis-build btn-link"><i class="fas fa-play" data-toggle="tooltip" title="' + current.$messages['service:build:travis:build'] + '"></i></button>';
 			// Help
 			result += current.$super('renderServiceHelpLink')(subscription.parameters, 'service:build:help');
 			return result;
@@ -64,7 +64,7 @@ define(function () {
 		renderDetailsFeatures: function (subscription) {
 			var job = subscription.data.job;
 			var title = (current.$messages['service:build:travis:status-' + job.status] || job.status) + (job.building ? ' (' + current.$messages['service:build:travis:building'] + ')' : '');
-			var clazz = (current.jobStatusColor[job.status] || 'text-muted') + ' ' + (job.building ? 'fa-refresh fa-spin' : current.jobStatusTypo[job.status] || 'fa fa-circle');
+			var clazz = (current.jobStatusColor[job.status] || 'text-muted') + ' ' + (job.building ? 'fa-sync-alt fa-spin' : current.jobStatusTypo[job.status] || 'fas fa-circle');
 			return '<i data-toggle="tooltip" title="' + title + '" class="' + clazz + '"></i>';
 		},
 
