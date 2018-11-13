@@ -2,13 +2,13 @@ package org.ligoj.app.plugin.build.travis;
 
 import java.util.Map;
 
-import org.ligoj.app.resource.plugin.CurlProcessor;
-import org.ligoj.app.resource.plugin.CurlRequest;
-import org.ligoj.app.resource.plugin.DefaultHttpResponseCallback;
+import org.ligoj.bootstrap.core.curl.CurlProcessor;
+import org.ligoj.bootstrap.core.curl.CurlRequest;
+import org.ligoj.bootstrap.core.curl.DefaultHttpResponseCallback;
 
 /**
  * Travis processor.
- * 
+ *
  * @see https://docs.travis-ci.com/api/
  */
 public class TravisCurlProcessor extends CurlProcessor {
