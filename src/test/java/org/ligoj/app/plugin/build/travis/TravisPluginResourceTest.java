@@ -96,11 +96,11 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 
 	@Test
 	public void validateJobNotFound() {
-		httpServer.stubFor(get(urlEqualTo("/repos/gfi/bootstrap")).willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND)));
+		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/bootstrap")).willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND)));
 		httpServer.start();
 
 		final Map<String, String> parameters = pvResource.getNodeParameters("service:build:travis:bpr");
-		parameters.put(TravisPluginResource.PARAMETER_JOB, "gfi/bootstrap");
+		parameters.put(TravisPluginResource.PARAMETER_JOB, "ligoj/bootstrap");
 		MatcherUtil.assertThrows(Assertions.assertThrows(ValidationJsonException.class, () -> {
 			resource.validateJob(parameters);
 		}), TravisPluginResource.PARAMETER_JOB, "travis-job");
