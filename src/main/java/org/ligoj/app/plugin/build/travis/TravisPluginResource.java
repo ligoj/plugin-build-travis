@@ -90,121 +90,15 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 		CODE_TO_STATUS.put("started", "yellow");
 	}
 
-	@Autowired
-	private ObjectMapper objectMapper;
-
-	@Override
-	public void link(final int subscription) throws Exception {
-		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
-		// Validate the job settings
-		validateJob(parameters);
-	}
-
 	/**
-	 * Validate the administration connectivity.
+	 * Return the color from the status of the job.
 	 *
-	 * @param parameters
-	 *            the administration parameters.
-	 * @return job name.
+	 * @param status
+	 *            last status for the job
+	 * @return The color for the current status.
 	 */
-	protected Job validateJob(final Map<String, String> parameters) throws URISyntaxException, IOException {
-		// Get job's configuration
-		final String job = parameters.get(PARAMETER_JOB);
-		String jobJson = getResource(parameters, "/repos/" + encode(job));
-		if (jobJson == null) {
-			// Invalid couple PKEY and id
-			throw new ValidationJsonException(PARAMETER_JOB, "travis-job", job);
-		}
-
-		final JsonNode node = objectMapper.readTree(jobJson);
-
-		// Retrieve description, status and display name
-		return transform(node.get("repo"));
-	}
-
-	private String encode(final String job) throws MalformedURLException, URISyntaxException {
-		return new URI("http", job, "").toURL().getPath();
-	}
-
-	/**
-	 * Return a Jenkins's resource. Return <code>null</code> when the resource
-	 * is not found.
-	 */
-	protected String getResource(final Map<String, String> parameters, final String resource) {
-		return getResource(new TravisCurlProcessor(parameters), parameters.get(PARAMETER_URL), resource);
-	}
-
-	/**
-	 * Return a Jenkins's resource. Return <code>null</code> when the resource
-	 * is not found.
-	 */
-	protected String getResource(final CurlProcessor processor, final String url, final String resource) {
-		// Get the resource using the preempted authentication
-		final CurlRequest request = new CurlRequest("GET", StringUtils.appendIfMissing(url, "/") + resource, null);
-		request.setSaveResponse(true);
-		processor.process(request);
-		// TODO Handle 403 response with ligoj-api 1.1.9+
-		return request.getResponse();
-	}
-
-	/**
-	 * Search the Travis's jobs matching to the given criteria. Name, display
-	 * name and description are considered.
-	 *
-	 * @param node
-	 *            the node to be tested with given parameters.
-	 * @param criteria
-	 *            the search criteria.
-	 * @return job names matching the criteria.
-	 */
-	@GET
-	@Path("{node}/{criteria}")
-	@Consumes(MediaType.APPLICATION_JSON)
-	public List<Job> findAllByName(@PathParam("node") final String node, @PathParam("criteria") final String criteria) throws IOException {
-		return findAllByName(node, criteria, null);
-	}
-
-	/**
-	 * Get Travis job name by id.
-	 *
-	 * @param node
-	 *            the node to be tested with given parameters.
-	 * @param id
-	 *            The job name/identifier.
-	 * @return job names matching the criteria.
-	 */
-	@GET
-	@Path("{node}/job/{id}")
-	@Consumes(MediaType.APPLICATION_JSON)
-	public Job findById(@PathParam("node") final String node, @PathParam("id") final String id) throws URISyntaxException, IOException {
-		// Prepare the context, an ordered set of jobs
-		final Map<String, String> parameters = pvResource.getNodeParameters(node);
-		parameters.put(PARAMETER_JOB, id);
-		return validateJob(parameters);
-	}
-
-	/**
-	 * Search the Jenkin's jobs matching to the given criteria. Name, display
-	 * name and description are considered.
-	 *
-	 * @param node
-	 *            the node to be tested with given parameters.
-	 * @param criteria
-	 *            the search criteria.
-	 * @param view
-	 *            The optional view URL.
-	 * @return job names matching the criteria.
-	 */
-	private List<Job> findAllByName(final String node, final String criteria, final String view) throws IOException {
-		final Map<String, String> parameters = pvResource.getNodeParameters(node);
-
-		// Get the jobs and parse them
-		final String url = StringUtils.trimToEmpty(view) + "repos?search=" + criteria + "&orderBy=name&limit=10";
-		final InputStream jobsAsInput = IOUtils.toInputStream(StringUtils.defaultString(getResource(parameters, url), "{\"repos\":[]}"),
-				StandardCharsets.UTF_8);
-		final JsonNode jsonNode = objectMapper.readTree(jobsAsInput);
-		final ArrayNode jobsNode = (ArrayNode) jsonNode.get("repos");
-		return StreamSupport.stream(jobsNode.spliterator(), false).map(TravisPluginResource::transform).collect(Collectors.toList());
+	private static String toStatus(final String status) {
+		return CODE_TO_STATUS.getOrDefault(status, "red");
 	}
 
 	/**
@@ -226,34 +120,8 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 		return result;
 	}
 
-	/**
-	 * Return the color from the status of the job.
-	 *
-	 * @param status
-	 *            last status for the job
-	 * @return The color for the current status.
-	 */
-	private static String toStatus(final String status) {
-		return CODE_TO_STATUS.getOrDefault(status, "red");
-	}
-
-	@Override
-	public String getKey() {
-		return KEY;
-	}
-
-	@Override
-	public boolean checkStatus(final Map<String, String> parameters) {
-		// Try to obtain the configuration
-		return getResource(parameters, "config") != null;
-	}
-
-	@Override
-	public SubscriptionStatusWithData checkSubscriptionStatus(final Map<String, String> parameters) throws Exception {
-		final SubscriptionStatusWithData nodeStatusWithData = new SubscriptionStatusWithData();
-		nodeStatusWithData.put("job", validateJob(parameters));
-		return nodeStatusWithData;
-	}
+	@Autowired
+	private ObjectMapper objectMapper;
 
 	/**
 	 * Used to launch the job for the subscription.
@@ -297,6 +165,138 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 		} finally {
 			processor.close();
 		}
+	}
+
+	@Override
+	public boolean checkStatus(final Map<String, String> parameters) {
+		// Try to obtain the configuration
+		return getResource(parameters, "config") != null;
+	}
+
+	@Override
+	public SubscriptionStatusWithData checkSubscriptionStatus(final Map<String, String> parameters) throws Exception {
+		final SubscriptionStatusWithData nodeStatusWithData = new SubscriptionStatusWithData();
+		nodeStatusWithData.put("job", validateJob(parameters));
+		return nodeStatusWithData;
+	}
+
+	private String encode(final String job) throws MalformedURLException, URISyntaxException {
+		return new URI("http", job, "").toURL().getPath();
+	}
+
+	/**
+	 * Search the Travis's jobs matching to the given criteria. Name, display
+	 * name and description are considered.
+	 *
+	 * @param node
+	 *            the node to be tested with given parameters.
+	 * @param criteria
+	 *            the search criteria.
+	 * @return job names matching the criteria.
+	 */
+	@GET
+	@Path("{node}/{criteria}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public List<Job> findAllByName(@PathParam("node") final String node, @PathParam("criteria") final String criteria) throws IOException {
+		return findAllByName(node, criteria, null);
+	}
+
+	/**
+	 * Search the Jenkin's jobs matching to the given criteria. Name, display
+	 * name and description are considered.
+	 *
+	 * @param node
+	 *            the node to be tested with given parameters.
+	 * @param criteria
+	 *            the search criteria.
+	 * @param view
+	 *            The optional view URL.
+	 * @return job names matching the criteria.
+	 */
+	private List<Job> findAllByName(final String node, final String criteria, final String view) throws IOException {
+		final Map<String, String> parameters = pvResource.getNodeParameters(node);
+
+		// Get the jobs and parse them
+		final String url = StringUtils.trimToEmpty(view) + "repos?search=" + criteria + "&orderBy=name&limit=10";
+		final InputStream jobsAsInput = IOUtils.toInputStream(StringUtils.defaultString(getResource(parameters, url), "{\"repos\":[]}"),
+				StandardCharsets.UTF_8);
+		final JsonNode jsonNode = objectMapper.readTree(jobsAsInput);
+		final ArrayNode jobsNode = (ArrayNode) jsonNode.get("repos");
+		return StreamSupport.stream(jobsNode.spliterator(), false).map(TravisPluginResource::transform).collect(Collectors.toList());
+	}
+
+	/**
+	 * Get Travis job name by id.
+	 *
+	 * @param node
+	 *            the node to be tested with given parameters.
+	 * @param id
+	 *            The job name/identifier.
+	 * @return job names matching the criteria.
+	 */
+	@GET
+	@Path("{node}/job/{id}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Job findById(@PathParam("node") final String node, @PathParam("id") final String id) throws URISyntaxException, IOException {
+		// Prepare the context, an ordered set of jobs
+		final Map<String, String> parameters = pvResource.getNodeParameters(node);
+		parameters.put(PARAMETER_JOB, id);
+		return validateJob(parameters);
+	}
+
+	@Override
+	public String getKey() {
+		return KEY;
+	}
+
+	/**
+	 * Return a Jenkins's resource. Return <code>null</code> when the resource
+	 * is not found.
+	 */
+	protected String getResource(final CurlProcessor processor, final String url, final String resource) {
+		// Get the resource using the preempted authentication
+		final CurlRequest request = new CurlRequest("GET", StringUtils.appendIfMissing(url, "/") + resource, null);
+		request.setSaveResponse(true);
+		processor.process(request);
+		// TODO Handle 403 response with ligoj-api 1.1.9+
+		return request.getResponse();
+	}
+
+	/**
+	 * Return a Jenkins's resource. Return <code>null</code> when the resource
+	 * is not found.
+	 */
+	protected String getResource(final Map<String, String> parameters, final String resource) {
+		return getResource(new TravisCurlProcessor(parameters), parameters.get(PARAMETER_URL), resource);
+	}
+
+	@Override
+	public void link(final int subscription) throws Exception {
+		final Map<String, String> parameters = subscriptionResource.getParameters(subscription);
+		// Validate the job settings
+		validateJob(parameters);
+	}
+
+	/**
+	 * Validate the administration connectivity.
+	 *
+	 * @param parameters
+	 *            the administration parameters.
+	 * @return job name.
+	 */
+	protected Job validateJob(final Map<String, String> parameters) throws URISyntaxException, IOException {
+		// Get job's configuration
+		final String job = parameters.get(PARAMETER_JOB);
+		String jobJson = getResource(parameters, "/repos/" + encode(job));
+		if (jobJson == null) {
+			// Invalid couple PKEY and id
+			throw new ValidationJsonException(PARAMETER_JOB, "travis-job", job);
+		}
+
+		final JsonNode node = objectMapper.readTree(jobJson);
+
+		// Retrieve description, status and display name
+		return transform(node.get("repo"));
 	}
 
 }
