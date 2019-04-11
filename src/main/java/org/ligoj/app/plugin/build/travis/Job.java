@@ -6,11 +6,16 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Jenkins job definition.
+ * Travis job definition.
  */
 @Getter
 @Setter
 public class Job extends DescribedBean<String> {
+
+	/**
+	 * SID
+	 */
+	private static final long serialVersionUID = 1L;
 
 	private String status;
 	private boolean building;
