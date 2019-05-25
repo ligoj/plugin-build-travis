@@ -9,7 +9,7 @@ import org.ligoj.bootstrap.core.curl.DefaultHttpResponseCallback;
 /**
  * Travis processor.
  *
- * @see https://docs.travis-ci.com/api/
+ * @see <a href="https://docs.travis-ci.com/api/">API</a>
  */
 public class TravisCurlProcessor extends CurlProcessor {
 

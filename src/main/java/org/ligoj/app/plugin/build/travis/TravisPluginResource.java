@@ -253,7 +253,7 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	 * Return a Jenkins's resource. Return <code>null</code> when the resource
 	 * is not found.
 	 */
-	protected String getResource(final CurlProcessor processor, final String url, final String resource) {
+	private String getResource(final CurlProcessor processor, final String url, final String resource) {
 		// Get the resource using the preempted authentication
 		final CurlRequest request = new CurlRequest("GET", StringUtils.appendIfMissing(url, "/") + resource, null);
 		request.setSaveResponse(true);

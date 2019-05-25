@@ -50,7 +50,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @ContextConfiguration(locations = "classpath:/META-INF/spring/application-context-test.xml")
 @Rollback
 @Transactional
-public class TravisPluginResourceTest extends AbstractServerTest {
+class TravisPluginResourceTest extends AbstractServerTest {
 	@Autowired
 	private TravisPluginResource resource;
 
@@ -63,7 +63,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	protected int subscription;
 
 	@BeforeEach
-	public void prepareData() throws IOException {
+	void prepareData() throws IOException {
 		// Only with Spring context
 		persistEntities("csv",
 				new Class[] { Node.class, Parameter.class, Project.class, Subscription.class, ParameterValue.class, DelegateOrg.class },
@@ -78,24 +78,24 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	 * Return the subscription identifier of the given project. Assumes there is
 	 * only one subscription for a service.
 	 */
-	protected int getSubscription(final String project) {
+	private int getSubscription(final String project) {
 		return getSubscription(project, BuildResource.SERVICE_KEY);
 	}
 
 	@Test
-	public void deleteLocal() throws Exception {
+	void deleteLocal() throws Exception {
 		resource.delete(subscription, false);
 		// nothing has been done. If remote delete is done, an exception will be
 		// thrown and this test will fail.
 	}
 
 	@Test
-	public void getJenkinsResourceInvalidUrl() {
+	void getJenkinsResourceInvalidUrl() {
 		resource.getResource(new HashMap<>(), null);
 	}
 
 	@Test
-	public void validateJobNotFound() {
+	void validateJobNotFound() {
 		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/bootstrap")).willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND)));
 		httpServer.start();
 
@@ -107,7 +107,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void link() throws Exception {
+	void link() throws Exception {
 		// addLoginAccess();
 		// addAdminAccess();
 		addJobAccess();
@@ -135,7 +135,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void validateJob() throws IOException, URISyntaxException {
+	void validateJob() throws IOException, URISyntaxException {
 		addJobAccess();
 		httpServer.start();
 
@@ -145,7 +145,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void validateJobBuilding() throws IOException, URISyntaxException {
+	void validateJobBuilding() throws IOException, URISyntaxException {
 		addJobAccessBuilding();
 		httpServer.start();
 
@@ -163,7 +163,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void checkStatus() throws Exception {
+	void checkStatus() throws Exception {
 		addConfigAccess();
 		httpServer.start();
 
@@ -173,7 +173,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void checkStatusFailed() {
+	void checkStatusFailed() {
 		httpServer.start();
 
 		final Map<String, String> parametersNoCheck = subscriptionResource.getParametersNoCheck(subscription);
@@ -182,7 +182,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void checkSubscriptionStatus() throws Exception {
+	void checkSubscriptionStatus() throws Exception {
 		addJobAccess();
 		httpServer.start();
 
@@ -210,7 +210,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void findJobsByName() throws Exception {
+	void findJobsByName() throws Exception {
 		httpServer
 				.stubFor(get(urlPathEqualTo("/repos")).withQueryParam("search", equalTo("ligo")).withQueryParam("orderBy", equalTo("name"))
 						.withQueryParam("limit", equalTo("10"))
@@ -229,7 +229,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void findJobsByNameAuthFailed() throws Exception {
+	void findJobsByNameAuthFailed() throws Exception {
 		// All queries would fail
 		httpServer.start();
 
@@ -237,14 +237,14 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void findJobsByIdSuccess() throws Exception {
+	void findJobsByIdSuccess() throws Exception {
 		addJobAccessBuilding();
 		httpServer.start();
 		checkJob(resource.findById("service:build:travis:bpr", "ligoj/plugin-vm-google"), true, "yellow");
 	}
 
 	@Test
-	public void findJobsByIdFail() {
+	void findJobsByIdFail() {
 		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/any"))
 				.willReturn(aResponse().withStatus(HttpStatus.SC_NOT_FOUND).withBody("{\"file\":\"not found\"}")));
 		httpServer.start();
@@ -254,7 +254,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void buildNotExists() {
+	void buildNotExists() {
 		httpServer.start();
 		Assertions.assertEquals(Assertions.assertThrows(BusinessException.class, () -> {
 			this.resource.build(subscription);
@@ -262,7 +262,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void buildFailed() throws Exception {
+	void buildFailed() throws Exception {
 		addJobAccess();
 		httpServer.stubFor(post(urlEqualTo("/builds/274572860/restart")).willReturn(aResponse().withStatus(HttpStatus.SC_FORBIDDEN)));
 		httpServer.start();
@@ -272,7 +272,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void buildFailedBecauseNoBuildAvailabled() throws Exception {
+	void buildFailedBecauseNoBuildAvailabled() throws Exception {
 
 		httpServer.stubFor(get(urlEqualTo("/repos/ligoj/plugin-vm-google")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)
 				.withBody(IOUtils.toString(
@@ -286,7 +286,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void build() throws Exception {
+	void build() throws Exception {
 		addJobAccess();
 		httpServer.stubFor(post(urlEqualTo("/builds/274572860/restart")).willReturn(aResponse().withStatus(HttpStatus.SC_OK)));
 		httpServer.start();
@@ -294,7 +294,7 @@ public class TravisPluginResourceTest extends AbstractServerTest {
 	}
 
 	@Test
-	public void buildInvalidUrl() {
+	void buildInvalidUrl() {
 		@SuppressWarnings("unchecked")
 		final Map<String, String> map = Mockito.mock(Map.class);
 		Mockito.when(map.get(TravisPluginResource.PARAMETER_USER)).thenReturn("some");
