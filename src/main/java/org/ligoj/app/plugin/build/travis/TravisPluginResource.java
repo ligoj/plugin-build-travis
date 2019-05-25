@@ -93,8 +93,7 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	/**
 	 * Return the color from the status of the job.
 	 *
-	 * @param status
-	 *            last status for the job
+	 * @param status last status for the job
 	 * @return The color for the current status.
 	 */
 	private static String toStatus(final String status) {
@@ -104,8 +103,7 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	/**
 	 * Transform the json content to an instance of <tt>Job</tt>.
 	 *
-	 * @param item
-	 *            Json Content describing a job
+	 * @param item Json Content describing a job
 	 * @return Instance of <tt>Job</tt>
 	 */
 	private static Job transform(JsonNode item) {
@@ -126,10 +124,9 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	/**
 	 * Used to launch the job for the subscription.
 	 *
-	 * @param subscription
-	 *            the subscription to use to locate the Travis instance.
-	 * @throws Exception
-	 *             when the job cannot be launched
+	 * @param subscription the subscription to use to locate the Travis instance.
+	 * @throws URISyntaxException When the Travis URL is malformed.
+	 * @throws IOException        When Travis JSON configuration cannot be parsed.
 	 */
 	@POST
 	@Path("build/{subscription:\\d+}")
@@ -151,17 +148,16 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	/**
 	 * Launch the job with the job.
 	 *
-	 * @param parameters
-	 *            Parameters used to define the job
-	 * @param job
-	 *            contains some information on the job as the last build id.
+	 * @param parameters Parameters used to define the job
+	 * @param job        contains some information on the job as the last build id.
 	 * @return The result of the processing.
 	 */
 	protected boolean build(final Map<String, String> parameters, final Job job) {
 		final CurlProcessor processor = new TravisCurlProcessor(parameters);
 		try {
 			final String travisBaseUrl = parameters.get(PARAMETER_URL);
-			return processor.process(new CurlRequest("POST", travisBaseUrl + "/builds/" + job.getLastBuildId() + "/restart", null));
+			return processor.process(
+					new CurlRequest("POST", travisBaseUrl + "/builds/" + job.getLastBuildId() + "/restart", null));
 		} finally {
 			processor.close();
 		}
@@ -185,59 +181,57 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	}
 
 	/**
-	 * Search the Travis's jobs matching to the given criteria. Name, display
-	 * name and description are considered.
+	 * Search the Travis's jobs matching to the given criteria. Name, display name and description are considered.
 	 *
-	 * @param node
-	 *            the node to be tested with given parameters.
-	 * @param criteria
-	 *            the search criteria.
+	 * @param node     the node to be tested with given parameters.
+	 * @param criteria the search criteria.
 	 * @return job names matching the criteria.
+	 * @throws IOException When Travis JSON configuration cannot be parsed.
 	 */
 	@GET
 	@Path("{node}/{criteria}")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public List<Job> findAllByName(@PathParam("node") final String node, @PathParam("criteria") final String criteria) throws IOException {
+	public List<Job> findAllByName(@PathParam("node") final String node, @PathParam("criteria") final String criteria)
+			throws IOException {
 		return findAllByName(node, criteria, null);
 	}
 
 	/**
-	 * Search the Jenkin's jobs matching to the given criteria. Name, display
-	 * name and description are considered.
+	 * Search the Jenkin's jobs matching to the given criteria. Name, display name and description are considered.
 	 *
-	 * @param node
-	 *            the node to be tested with given parameters.
-	 * @param criteria
-	 *            the search criteria.
-	 * @param view
-	 *            The optional view URL.
+	 * @param node     the node to be tested with given parameters.
+	 * @param criteria the search criteria.
+	 * @param view     The optional view URL.
 	 * @return job names matching the criteria.
+	 * @throws IOException When Travis JSON configuration cannot be parsed.
 	 */
 	private List<Job> findAllByName(final String node, final String criteria, final String view) throws IOException {
 		final Map<String, String> parameters = pvResource.getNodeParameters(node);
 
 		// Get the jobs and parse them
 		final String url = StringUtils.trimToEmpty(view) + "repos?search=" + criteria + "&orderBy=name&limit=10";
-		final InputStream jobsAsInput = IOUtils.toInputStream(StringUtils.defaultString(getResource(parameters, url), "{\"repos\":[]}"),
-				StandardCharsets.UTF_8);
+		final InputStream jobsAsInput = IOUtils.toInputStream(
+				StringUtils.defaultString(getResource(parameters, url), "{\"repos\":[]}"), StandardCharsets.UTF_8);
 		final JsonNode jsonNode = objectMapper.readTree(jobsAsInput);
 		final ArrayNode jobsNode = (ArrayNode) jsonNode.get("repos");
-		return StreamSupport.stream(jobsNode.spliterator(), false).map(TravisPluginResource::transform).collect(Collectors.toList());
+		return StreamSupport.stream(jobsNode.spliterator(), false).map(TravisPluginResource::transform)
+				.collect(Collectors.toList());
 	}
 
 	/**
 	 * Get Travis job name by id.
 	 *
-	 * @param node
-	 *            the node to be tested with given parameters.
-	 * @param id
-	 *            The job name/identifier.
+	 * @param node the node to be tested with given parameters.
+	 * @param id   The job name/identifier.
 	 * @return job names matching the criteria.
+	 * @throws URISyntaxException When the Travis URL is malformed.
+	 * @throws IOException        When Travis JSON configuration cannot be parsed.
 	 */
 	@GET
 	@Path("{node}/job/{id}")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public Job findById(@PathParam("node") final String node, @PathParam("id") final String id) throws URISyntaxException, IOException {
+	public Job findById(@PathParam("node") final String node, @PathParam("id") final String id)
+			throws URISyntaxException, IOException {
 		// Prepare the context, an ordered set of jobs
 		final Map<String, String> parameters = pvResource.getNodeParameters(node);
 		parameters.put(PARAMETER_JOB, id);
@@ -250,8 +244,7 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	}
 
 	/**
-	 * Return a Jenkins's resource. Return <code>null</code> when the resource
-	 * is not found.
+	 * Return a Travis's resource. Return <code>null</code> when the resource is not found.
 	 */
 	private String getResource(final CurlProcessor processor, final String url, final String resource) {
 		// Get the resource using the preempted authentication
@@ -263,8 +256,11 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	}
 
 	/**
-	 * Return a Jenkins's resource. Return <code>null</code> when the resource
-	 * is not found.
+	 * Return a Travis's resource. Return <code>null</code> when the resource is not found.
+	 * 
+	 * @param parameters The subscription parameters.
+	 * @param resource   The Travis resource?
+	 * @return The resource content.
 	 */
 	protected String getResource(final Map<String, String> parameters, final String resource) {
 		return getResource(new TravisCurlProcessor(parameters), parameters.get(PARAMETER_URL), resource);
@@ -280,9 +276,10 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	/**
 	 * Validate the administration connectivity.
 	 *
-	 * @param parameters
-	 *            the administration parameters.
+	 * @param parameters the administration parameters.
 	 * @return job name.
+	 * @throws URISyntaxException When the Travis URL is malformed.
+	 * @throws IOException        When Travis JSON configuration cannot be parsed.
 	 */
 	protected Job validateJob(final Map<String, String> parameters) throws URISyntaxException, IOException {
 		// Get job's configuration
