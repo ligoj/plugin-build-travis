@@ -37,7 +37,7 @@ define(function () {
 		 * Render Build travis data.
 		 */
 		renderFeatures: function (subscription) {
-			var result = current.$super('renderServicelink')('home', subscription.parameters['service:build:travis:url-site'] + subscription.parameters['service:build:travis:job'], 'service:build:travis:job', undefined, ' target="_blank"');
+			var result = current.$super('renderServiceLink')('home', subscription.parameters['service:build:travis:url-site'] + subscription.parameters['service:build:travis:job'], 'service:build:travis:job', undefined, ' target="_blank"');
 			result += '<button class="service-build-travis-build btn-link"><i class="fas fa-play" data-toggle="tooltip" title="' + current.$messages['service:build:travis:build'] + '"></i></button>';
 			// Help
 			result += current.$super('renderServiceHelpLink')(subscription.parameters, 'service:build:help');
