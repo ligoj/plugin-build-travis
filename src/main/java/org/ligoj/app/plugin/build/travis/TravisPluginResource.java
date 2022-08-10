@@ -9,7 +9,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import javax.ws.rs.Consumes;
@@ -214,8 +213,7 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 				StringUtils.defaultString(getResource(parameters, url), "{\"repos\":[]}"), StandardCharsets.UTF_8);
 		final JsonNode jsonNode = objectMapper.readTree(jobsAsInput);
 		final ArrayNode jobsNode = (ArrayNode) jsonNode.get("repos");
-		return StreamSupport.stream(jobsNode.spliterator(), false).map(TravisPluginResource::transform)
-				.collect(Collectors.toList());
+		return StreamSupport.stream(jobsNode.spliterator(), false).map(TravisPluginResource::transform).toList();
 	}
 
 	/**
