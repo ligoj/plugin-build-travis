@@ -16,7 +16,7 @@ public class TravisCurlProcessor extends CurlProcessor {
 	/**
 	 * Token used to communicate with API.
 	 */
-	private String apiToken;
+	private final String apiToken;
 
 	/**
 	 * Constructor using parameters set.
