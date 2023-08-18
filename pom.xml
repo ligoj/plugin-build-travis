@@ -5,7 +5,7 @@
 		<groupId>org.ligoj.api</groupId>
 		<artifactId>plugin-parent</artifactId>
 		<version>4.0.5</version>
-		<relativePath />
+		<relativePath/>
 	</parent>
 
 	<groupId>org.ligoj.plugin</groupId>
@@ -36,7 +36,7 @@
 		<dependency>
 			<groupId>org.ligoj.plugin</groupId>
 			<artifactId>plugin-build</artifactId>
-			<version>[1.0.1,1.1.0)</version>
+			<version>1.1.0</version>
 			<scope>provided</scope>
 		</dependency>
 	</dependencies>
