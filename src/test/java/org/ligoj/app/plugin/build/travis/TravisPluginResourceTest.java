@@ -17,7 +17,7 @@ import java.util.Map;
 import jakarta.transaction.Transactional;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpStatus;
+import org.apache.hc.core5.http.HttpStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -207,7 +207,7 @@ class TravisPluginResourceTest extends AbstractServerTest {
 	@Test
 	void findJobsByName() throws Exception {
 		httpServer
-				.stubFor(get(urlPathEqualTo("/repos")).withQueryParam("search", equalTo("ligo")).withQueryParam("orderBy", equalTo("name"))
+				.stubFor(get(urlPathEqualTo("/repos")).withQueryParam("search", equalTo("ligoj")).withQueryParam("orderBy", equalTo("name"))
 						.withQueryParam("limit", equalTo("10"))
 						.willReturn(aResponse().withStatus(HttpStatus.SC_OK).withBody(
 								IOUtils.toString(new ClassPathResource("mock-server/travis/travis-find-job.json").getInputStream(),
@@ -215,7 +215,7 @@ class TravisPluginResourceTest extends AbstractServerTest {
 
 		httpServer.start();
 
-		final List<Job> jobs = resource.findAllByName("service:build:travis:bpr", "ligo");
+		final List<Job> jobs = resource.findAllByName("service:build:travis:bpr", "ligoj");
 		Assertions.assertEquals(5, jobs.size());
 		Assertions.assertEquals("ligoj/plugin-vm-aws", jobs.get(1).getName());
 		Assertions.assertEquals("Ligoj plugin for AWS EC2 instance life cycle management : scheduled ON/OFF", jobs.get(1).getDescription());
@@ -228,7 +228,7 @@ class TravisPluginResourceTest extends AbstractServerTest {
 		// All queries would fail
 		httpServer.start();
 
-		Assertions.assertEquals(0, resource.findAllByName("service:build:travis:bpr", "ligo").size());
+		Assertions.assertEquals(0, resource.findAllByName("service:build:travis:bpr", "ligoj").size());
 	}
 
 	@Test
