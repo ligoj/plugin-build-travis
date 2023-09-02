@@ -1,24 +1,10 @@
 package org.ligoj.app.plugin.build.travis;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.StreamSupport;
-
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.ligoj.app.api.SubscriptionStatusWithData;
@@ -32,9 +18,17 @@ import org.ligoj.bootstrap.core.validation.ValidationJsonException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.StreamSupport;
 
 /**
  * Travis CI resource.
@@ -109,7 +103,7 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 		Job result = new Job();
 		result.setName(item.get("slug").asText());
 		result.setDescription(item.get("description").asText());
-		final String statusNode = StringUtils.defaultString(item.get("last_build_state").asText(), "red");
+		final String statusNode = Objects.toString(item.get("last_build_state").asText(), "red");
 		result.setStatus(toStatus(statusNode));
 		result.setLastBuildId((item.get("last_build_id").asText(null)));
 		result.setBuilding("started".equals(statusNode));
@@ -152,7 +146,7 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	 * @return The result of the processing.
 	 */
 	protected boolean build(final Map<String, String> parameters, final Job job) {
-		final CurlProcessor processor = new TravisCurlProcessor(parameters);
+		final var processor = new TravisCurlProcessor(parameters);
 		try {
 			final String travisBaseUrl = parameters.get(PARAMETER_URL);
 			return processor.process(
@@ -196,7 +190,7 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	}
 
 	/**
-	 * Search the Jenkin's jobs matching to the given criteria. Name, display name and description are considered.
+	 * Search the Jenkins's jobs matching to the given criteria. Name, display name and description are considered.
 	 *
 	 * @param node     the node to be tested with given parameters.
 	 * @param criteria the search criteria.
@@ -210,7 +204,7 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 		// Get the jobs and parse them
 		final String url = StringUtils.trimToEmpty(view) + "repos?search=" + criteria + "&orderBy=name&limit=10";
 		final InputStream jobsAsInput = IOUtils.toInputStream(
-				StringUtils.defaultString(getResource(parameters, url), "{\"repos\":[]}"), StandardCharsets.UTF_8);
+				Objects.toString(getResource(parameters, url), "{\"repos\":[]}"), StandardCharsets.UTF_8);
 		final JsonNode jsonNode = objectMapper.readTree(jobsAsInput);
 		final ArrayNode jobsNode = (ArrayNode) jsonNode.get("repos");
 		return StreamSupport.stream(jobsNode.spliterator(), false).map(TravisPluginResource::transform).toList();
