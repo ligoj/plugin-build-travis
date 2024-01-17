@@ -66,7 +66,7 @@ class TravisPluginResourceTest extends AbstractServerTest {
 	void prepareData() throws IOException {
 		// Only with Spring context
 		persistEntities("csv",
-				new Class[]{Node.class, Parameter.class, Project.class, Subscription.class, ParameterValue.class, DelegateOrg.class},
+				new Class<?>[]{Node.class, Parameter.class, Project.class, Subscription.class, ParameterValue.class, DelegateOrg.class},
 				StandardCharsets.UTF_8);
 		this.subscription = getSubscription("Jupiter");
 
