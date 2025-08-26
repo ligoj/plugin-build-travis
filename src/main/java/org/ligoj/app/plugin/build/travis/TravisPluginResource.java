@@ -7,6 +7,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.ligoj.app.api.SubscriptionStatusWithData;
 import org.ligoj.app.plugin.build.BuildResource;
 import org.ligoj.app.plugin.build.BuildServicePlugin;
@@ -240,7 +241,7 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	 */
 	private String getResource(final CurlProcessor processor, final String url, final String resource) {
 		// Get the resource using the preempted authentication
-		final CurlRequest request = new CurlRequest("GET", StringUtils.appendIfMissing(url, "/") + resource, null);
+		final CurlRequest request = new CurlRequest("GET", Strings.CS.appendIfMissing(url, "/") + resource, null);
 		request.setSaveResponse(true);
 		processor.process(request);
 		// TODO Handle 403 response with ligoj-api 1.1.9+
