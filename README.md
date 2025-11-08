@@ -1,4 +1,4 @@
-# :link: Ligoj Travis CI plugin [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.ligoj.plugin/plugin-build-travis/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.ligoj.plugin/plugin-build-travis)
+# :link: Ligoj Travis CI plugin ![Maven Central](https://img.shields.io/maven-central/v/org.ligoj.plugin/plugin-build-travis)
 
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=org.ligoj.plugin%3Aplugin-build-travis&metric=coverage)](https://sonarcloud.io/dashboard?id=org.ligoj.plugin%3Aplugin-build-travis)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?metric=alert_status&project=org.ligoj.plugin:plugin-build-travis)](https://sonarcloud.io/dashboard/index/org.ligoj.plugin:plugin-build-travis)
