@@ -10,8 +10,7 @@
  * read live `subscription.data.job` — that live-data surface is deferred
  * (as for jenkins). Kept free of Vue SFC imports for unit testing.
  */
-import { h } from 'vue'
-import { VBtn, VChip, VIcon, useI18nStore } from '@ligoj/host'
+import { renderServiceLink, renderDetailsChip, useI18nStore } from '@ligoj/host'
 
 const PARAM_SITE = 'service:build:travis:url-site'
 const PARAM_JOB = 'service:build:travis:job'
@@ -23,21 +22,7 @@ function renderFeatures(subscription) {
   const job = params?.[PARAM_JOB]
   if (!site || !job) return []
   const { t } = useI18nStore()
-  return [
-    h(
-      VBtn,
-      {
-        icon: true,
-        size: 'small',
-        variant: 'text',
-        href: `${site.replace(/\/$/, '')}/${job}`,
-        target: '_blank',
-        rel: 'noopener noreferrer',
-        title: t('service:build:travis:job'),
-      },
-      () => h(VIcon, { size: 'small' }, () => 'mdi-home'),
-    ),
-  ]
+  return [renderServiceLink({ icon: 'mdi-home', href: `${site.replace(/\/$/, '')}/${job}`, title: t('service:build:travis:job') })]
 }
 
 /** Job-name chip. Mirrors `renderKey('service:build:travis:job')`. */
@@ -45,11 +30,7 @@ function renderDetailsKey(subscription) {
   const job = subscription?.parameters?.[PARAM_JOB]
   if (!job) return null
   const { t } = useI18nStore()
-  return h(
-    VChip,
-    { size: 'small', variant: 'tonal', class: 'mr-1', title: t('service:build:travis:job') },
-    () => [h(VIcon, { start: true, size: 'small' }, () => 'mdi-cog-outline'), ' ', String(job)],
-  )
+  return renderDetailsChip({ icon: 'mdi-cog-outline', text: job, title: t('service:build:travis:job') })
 }
 
 export default { renderFeatures, renderDetailsKey }
