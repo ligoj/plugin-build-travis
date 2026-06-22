@@ -1,4 +1,4 @@
-package org.ligoj.app.plugin.build.travis;
+package org.ligoj.app.plugin.travis;
 
 import org.ligoj.bootstrap.core.DescribedBean;
 

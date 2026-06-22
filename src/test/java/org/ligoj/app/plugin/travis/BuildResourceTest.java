@@ -1,4 +1,4 @@
-package org.ligoj.app.plugin.build.travis;
+package org.ligoj.app.plugin.travis;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

@@ -1,4 +1,4 @@
-package org.ligoj.app.plugin.build.travis;
+package org.ligoj.app.plugin.travis;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;

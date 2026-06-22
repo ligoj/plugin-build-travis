@@ -1,4 +1,4 @@
-package org.ligoj.app.plugin.build.travis;
+package org.ligoj.app.plugin.travis;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
