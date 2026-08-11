@@ -1,21 +1,6 @@
 package org.ligoj.app.plugin.travis;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import jakarta.transaction.Transactional;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.hc.core5.http.HttpStatus;
 import org.junit.jupiter.api.Assertions;
@@ -25,23 +10,29 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.ligoj.app.AbstractServerTest;
 import org.ligoj.app.api.SubscriptionStatusWithData;
 import org.ligoj.app.iam.model.DelegateOrg;
-import org.ligoj.app.model.Node;
-import org.ligoj.app.model.Parameter;
-import org.ligoj.app.model.ParameterValue;
-import org.ligoj.app.model.Project;
-import org.ligoj.app.model.Subscription;
+import org.ligoj.app.model.*;
 import org.ligoj.app.plugin.build.BuildResource;
 import org.ligoj.app.resource.node.ParameterValueResource;
 import org.ligoj.app.resource.subscription.SubscriptionResource;
 import org.ligoj.bootstrap.MatcherUtil;
 import org.ligoj.bootstrap.core.resource.BusinessException;
 import org.ligoj.bootstrap.core.validation.ValidationJsonException;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test class of {@link TravisPluginResource}
@@ -282,10 +273,10 @@ class TravisPluginResourceTest extends AbstractServerTest {
 
 	@Test
 	void buildInvalidUrl() {
-		@SuppressWarnings("unchecked") final Map<String, String> map = Mockito.mock(Map.class);
-		Mockito.when(map.get(TravisPluginResource.PARAMETER_USER)).thenReturn("some");
-		Mockito.when(map.get(TravisPluginResource.PARAMETER_TOKEN)).thenReturn("some");
-		Mockito.when(map.get(TravisPluginResource.PARAMETER_URL)).thenThrow(new RuntimeException("some"));
+		@SuppressWarnings("unchecked") final Map<String, String> map = mock(Map.class);
+		when(map.get(TravisPluginResource.PARAMETER_USER)).thenReturn("some");
+		when(map.get(TravisPluginResource.PARAMETER_TOKEN)).thenReturn("some");
+		when(map.get(TravisPluginResource.PARAMETER_URL)).thenThrow(new RuntimeException("some"));
 		Assertions.assertEquals(Assertions.assertThrows(RuntimeException.class, () -> this.resource.build(map, null)).getMessage(), "some");
 	}
 
