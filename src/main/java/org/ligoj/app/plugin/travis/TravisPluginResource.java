@@ -1,8 +1,5 @@
 package org.ligoj.app.plugin.travis;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.apache.commons.io.IOUtils;
@@ -18,6 +15,9 @@ import org.ligoj.bootstrap.core.resource.BusinessException;
 import org.ligoj.bootstrap.core.validation.ValidationJsonException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -70,7 +70,7 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	public static final String PARAMETER_TEMPLATE_JOB = KEY + ":template-job";
 
 	/**
-	 * Web site URL
+	 * Website URL
 	 */
 	public static final String PARAMETER_URL = KEY + ":url-api";
 
@@ -97,18 +97,18 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	/**
 	 * Transform the json content to an instance of <tt>Job</tt>.
 	 *
-	 * @param item Json Content describing a job
+	 * @param item JSON Content describing a job
 	 * @return Instance of <tt>Job</tt>
 	 */
 	private static Job transform(JsonNode item) {
 		Job result = new Job();
-		result.setName(item.get("slug").asText());
-		result.setDescription(item.get("description").asText());
-		final String statusNode = Objects.toString(item.get("last_build_state").asText(), "red");
+		result.setName(item.get("slug").asString());
+		result.setDescription(item.get("description").asString());
+		final String statusNode = Objects.toString(item.get("last_build_state").asString(), "red");
 		result.setStatus(toStatus(statusNode));
-		result.setLastBuildId((item.get("last_build_id").asText(null)));
+		result.setLastBuildId((item.get("last_build_id").asString(null)));
 		result.setBuilding("started".equals(statusNode));
-		result.setId(item.get("slug").asText());
+		result.setId(item.get("slug").asString());
 		return result;
 	}
 
@@ -180,13 +180,11 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	 * @param node     the node to be tested with given parameters.
 	 * @param criteria the search criteria.
 	 * @return job names matching the criteria.
-	 * @throws IOException When Travis JSON configuration cannot be parsed.
 	 */
 	@GET
 	@Path("{node}/{criteria}")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public List<Job> findAllByName(@PathParam("node") final String node, @PathParam("criteria") final String criteria)
-			throws IOException {
+	public List<Job> findAllByName(@PathParam("node") final String node, @PathParam("criteria") final String criteria) {
 		return findAllByName(node, criteria, null);
 	}
 
@@ -197,9 +195,8 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 	 * @param criteria the search criteria.
 	 * @param view     The optional view URL.
 	 * @return job names matching the criteria.
-	 * @throws IOException When Travis JSON configuration cannot be parsed.
 	 */
-	private List<Job> findAllByName(final String node, final String criteria, final String view) throws IOException {
+	private List<Job> findAllByName(final String node, final String criteria, final String view) {
 		final Map<String, String> parameters = pvResource.getNodeParameters(node);
 
 		// Get the jobs and parse them
@@ -250,7 +247,7 @@ public class TravisPluginResource extends AbstractToolPluginResource implements 
 
 	/**
 	 * Return a Travis's resource. Return <code>null</code> when the resource is not found.
-	 * 
+	 *
 	 * @param parameters The subscription parameters.
 	 * @param resource   The Travis resource?
 	 * @return The resource content.
