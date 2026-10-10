@@ -10,7 +10,7 @@
  * read live `subscription.data.job` — that live-data surface is deferred
  * (as for jenkins). Kept free of Vue SFC imports for unit testing.
  */
-import { renderServiceLink, renderDetailsChip, useI18nStore } from '@ligoj/host'
+import { renderServiceLink, renderDetailsChip, useI18nStore, remoteSearchField } from '@ligoj/host'
 
 const PARAM_SITE = 'service:build:travis:url-site'
 const PARAM_JOB = 'service:build:travis:job'
@@ -33,4 +33,16 @@ function renderDetailsKey(subscription) {
   return renderDetailsChip({ icon: 'mdi-cog-outline', text: job, title: t('service:build:travis:job') })
 }
 
-export default { renderFeatures, renderDetailsKey }
+// Subscribe-wizard input: the jobs of the selected instance, searched as the user types
+const JobField = remoteSearchField({ path: 'rest/service/build/travis' })
+
+/**
+ * Subscribe-wizard hook: `service:build:travis:job` is picked among the jobs.
+ * Null for every other parameter and when editing a node: the default
+ * type-based input is rendered.
+ */
+function parameterField({ parameter, isNode } = {}) {
+  return !isNode && parameter?.id === PARAM_JOB ? JobField : null
+}
+
+export default { renderFeatures, renderDetailsKey, parameterField }
